@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BidLab - Prebid.js RTB Demo (Build-less)</title>
+    
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              bidlab: {
+                50: '#f0f7ff',
+                100: '#e0effe',
+                200: '#bae0fd',
+                300: '#7cc7fb',
+                400: '#38a9f8',
+                500: '#0e8de9',
+                600: '#026fc7',
+                700: '#0358a1',
+                800: '#074b84',
+                900: '#0c406e',
+                950: '#082849',
+              },
+            },
+          },
+        },
+      }
+    </script>
+    
+    <!-- Prebid.js -->
+    <script async src="https://acdn.adnxs.com/prebid/not-for-prod/prebid.js"></script>
+
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+      
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      
+      .font-mono {
+        font-family: 'JetBrains Mono', monospace;
+      }
+
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #1e293b;
+        border-radius: 10px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #334155;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <!-- Load the build-less Preact app -->
+    <script type="module" src="/public/js/main.js"></script>
+  </body>
+</html>

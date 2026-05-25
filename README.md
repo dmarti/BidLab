@@ -1,16 +1,49 @@
-# React + Vite
+# BidLab - Prebid.js Interactive Demo
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+BidLab is a valid HTML5 demonstration environment for Prebid.js, allowing developers to see real-time bidding in action with mock adapters and clear console logging.
 
-Currently, two official plugins are available:
+## Features
+- **Real-time Auction Logs**: See exactly what's happening during the bidding process.
+- **Mock Adapters**: Includes simulated demand from AppNexus, Rubicon, and OpenX.
+- **Dynamic Rendering**: The winning creative is automatically rendered in a secure iframe.
+- **Multiple Preview Modes**: Choose the one that fits your environment.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Project Structure
+The project is designed to be flexible, supporting both a modern React/Vite development workflow and a build-less "Regular JavaScript" preview.
 
-## React Compiler
+- `index.html`: Main entry point for the Vite-based development environment.
+- `demo.html`: **Recommended for easy preview.** Uses regular JavaScript (ES Modules) and CDNs for a build-less experience.
+- `public/js/`: Contains the build-less version of the application components.
+- `src/`: Contains the React/JSX version of the application (requires Node.js).
+- `dist/`: Contains the production-optimized build.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## How to Preview
 
-## Expanding the ESLint configuration
+### 1. Simple Preview (Recommended)
+This version uses regular JavaScript and requires no installation.
+```bash
+./preview.sh demo
+```
+Then open `http://localhost:3000/demo.html` in your browser.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 2. Standalone Single File
+If you want to see everything in one file without any external dependencies other than CDNs:
+Open `static-preview.html` directly in your web browser.
+
+### 3. Development Mode (for Engineers)
+Requires Node.js and `npm install`.
+```bash
+./preview.sh
+```
+This starts the Vite development server with Hot Module Replacement (HMR).
+
+### 4. Production Build
+```bash
+./preview.sh prod
+```
+
+## KPIs & Revenue Model
+- **Value Proposition**: Interactive Prebid.js testing environment.
+- **Target Customer**: Ad tech developers, publishers, and AdOps teams.
+- **Revenue Model**: Freemium tool with premium templates and consulting services.
+- **Key Metric**: Demo completions (successful auctions run).
