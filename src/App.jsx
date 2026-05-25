@@ -92,6 +92,43 @@ function App() {
         setIsAuctionRunning(false);
     }, [addLog, trackEvent]);
 
+    const injectMockBids = useCallback(() => {
+        const pbjs = window.pbjs;
+        const mockBidders = ['appnexus', 'rubicon', 'openx'];
+        
+        mockBidders.forEach(bidder => {
+            const cpm = (Math.random() * 10 + 1).toFixed(2);
+            const latency = Math.floor(Math.random() * 600) + 200;
+            
+            setTimeout(() => {
+                const bid = {
+                    bidderCode: bidder,
+                    width: 300,
+                    height: 250,
+                    statusMessage: 'Bid available',
+                    adId: Math.random().toString(36).substring(2, 15),
+                    cpm: parseFloat(cpm),
+                    ad: `<html><body style="margin:0;padding:0;background:#0f172a;display:flex;align-items:center;justify-content:center;height:250px;border:2px solid #3b82f6;border-radius:8px;box-sizing:border-box;"><div style="text-align:center;color:white;font-family:sans-serif;"><div style="font-weight:bold;font-size:24px;margin-bottom:8px;">${bidder.toUpperCase()}</div><div style="color:#60a5fa;font-size:18px;">WINNING BID: ${cpm}</div><div style="font-size:12px;margin-top:12px;opacity:0.7;">Rendered via BidLab Mock Adapter</div></div></body></html>`,
+                    currency: 'USD',
+                    netRevenue: true,
+                    ttl: 300,
+                    creativeId: 'mock-creative-' + bidder,
+                    requestId: 'mock-req-' + bidder,
+                    auctionId: 'mock-auc-' + bidder,
+                    transactionId: 'mock-tx-' + bidder,
+                    responseTimestamp: Date.now(),
+                    requestTimestamp: Date.now() - latency,
+                    bidder: bidder,
+                    timeToRespond: latency,
+                    size: '300x250',
+                    adUnitCode: 'ad-slot-1'
+                };
+                pbjs.addBidResponse('ad-slot-1', bid);
+                addLog(`Mock bid received: ${bidder} (${cpm})`, "bid");
+            }, latency);
+        });
+    }, [addLog]);
+
     const runAuction = () => {
         const pbjs = window.pbjs;
         if (!pbjs) {
@@ -110,6 +147,8 @@ function App() {
                     handleBids();
                 }
             });
+            // Inject mock bids to ensure the demo always has winners
+            injectMockBids();
         });
     };
 

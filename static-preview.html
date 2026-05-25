@@ -322,6 +322,43 @@
                 setIsAuctionRunning(false);
             }, [addLog, trackEvent]);
 
+            const injectMockBids = useCallback(() => {
+                const pbjs = window.pbjs;
+                const mockBidders = ['appnexus', 'rubicon', 'openx'];
+                
+                mockBidders.forEach(bidder => {
+                    const cpm = (Math.random() * 10 + 1).toFixed(2);
+                    const latency = Math.floor(Math.random() * 600) + 200;
+                    
+                    setTimeout(() => {
+                        const bid = {
+                            bidderCode: bidder,
+                            width: 300,
+                            height: 250,
+                            statusMessage: 'Bid available',
+                            adId: Math.random().toString(36).substring(2, 15),
+                            cpm: parseFloat(cpm),
+                            ad: bidder.toUpperCase(), // Prebid uses this if ad is not provided, but we'll use it to signal winner
+                            currency: 'USD',
+                            netRevenue: true,
+                            ttl: 300,
+                            creativeId: 'mock-creative-' + bidder,
+                            requestId: 'mock-req-' + bidder,
+                            auctionId: 'mock-auc-' + bidder,
+                            transactionId: 'mock-tx-' + bidder,
+                            responseTimestamp: Date.now(),
+                            requestTimestamp: Date.now() - latency,
+                            bidder: bidder,
+                            timeToRespond: latency,
+                            size: '300x250',
+                            adUnitCode: 'ad-slot-1'
+                        };
+                        pbjs.addBidResponse('ad-slot-1', bid);
+                        addLog(`Mock bid received: ${bidder} (${cpm})`, "bid");
+                    }, latency);
+                });
+            }, [addLog]);
+
             const runAuction = () => {
                 const pbjs = window.pbjs;
                 if (!pbjs) {
@@ -340,6 +377,8 @@
                             handleBids();
                         }
                     });
+                    // Inject mock bids to ensure the demo always has winners
+                    injectMockBids();
                 });
             };
 
