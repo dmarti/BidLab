@@ -49,8 +49,6 @@ function App() {
     }, [addLog]);
 
     const handleBids = useCallback((bidResponses) => {
-        addLog("Auction lifecycle complete", "event");
-        
         // In this demo, we use a hybrid approach:
         // 1. We look at real Prebid responses (if any)
         // 2. We supplement with our own simulated bidders for the demonstration
@@ -58,19 +56,21 @@ function App() {
         const responses = window.pbjs.getBidResponses();
         const slotBids = responses['ad-slot-1'] ? responses['ad-slot-1'].bids : [];
         
-        // Merge with simulated bids if no real ones came back (common in local dev)
-        const finalBids = slotBids.length > 0 ? slotBids : (window._simulatedBids || []);
+        // Merge with simulated bids
+        const finalBids = [...slotBids, ...(window._simulatedBids || [])];
         
+        addLog(`Auction lifecycle complete (${finalBids.length} bids total)`, "event");
+
         finalBids.sort((a, b) => b.cpm - a.cpm);
         
         finalBids.forEach(bid => {
-            addLog(`Bid: ${bid.bidder} - $${bid.cpm.toFixed(2)} (${bid.timeToRespond}ms)`, "bid");
+            addLog(`Bid: ${bid.bidder} - ${bid.cpm.toFixed(2)} (${bid.timeToRespond}ms)`, "bid");
         });
 
         const highestBid = finalBids[0];
         
         if (highestBid) {
-            addLog(`Winner: ${highestBid.bidder} ($${highestBid.cpm.toFixed(2)})`, "bid");
+            addLog(`Winner: ${highestBid.bidder} (${highestBid.cpm.toFixed(2)})`, "bid");
             setWinner(highestBid);
             setStatus(`Served by ${highestBid.bidder}`);
             
@@ -91,24 +91,29 @@ function App() {
         
         addLog("Simulating distributed bid adapters...", "event");
         
-        bidders.forEach(bidder => {
-            const cpm = (Math.random() * 8 + 2).toFixed(2);
-            const latency = Math.floor(Math.random() * 800) + 100;
-            
-            setTimeout(() => {
-                const mockBid = {
-                    bidder: bidder,
-                    cpm: parseFloat(cpm),
-                    timeToRespond: latency,
-                    ad: `<html><body style="margin:0;padding:0;background:#0f172a;display:flex;align-items:center;justify-content:center;height:250px;border:2px solid #3b82f6;border-radius:8px;box-sizing:border-box;"><div style="text-align:center;color:white;font-family:sans-serif;"><div style="font-weight:bold;font-size:24px;margin-bottom:8px;">${bidder.toUpperCase()}</div><div style="color:#60a5fa;font-size:18px;">WINNING BID: $${cpm}</div><div style="font-size:12px;margin-top:12px;opacity:0.7;">Rendered via BidLab Mock Adapter</div></div></body></html>`,
-                    width: 300,
-                    height: 250,
-                    adUnitCode: 'ad-slot-1'
-                };
-                window._simulatedBids.push(mockBid);
-                addLog(`Inbound bid from adapter: ${bidder}`, "event");
-            }, latency);
+        const promises = bidders.map(bidder => {
+            return new Promise(resolve => {
+                const cpm = (Math.random() * 8 + 2).toFixed(2);
+                const latency = Math.floor(Math.random() * 800) + 100;
+                
+                setTimeout(() => {
+                    const mockBid = {
+                        bidder: bidder,
+                        cpm: parseFloat(cpm),
+                        timeToRespond: latency,
+                        ad: `<html><body style="margin:0;padding:0;background:#0f172a;display:flex;align-items:center;justify-content:center;height:250px;border:2px solid #3b82f6;border-radius:8px;box-sizing:border-box;"><div style="text-align:center;color:white;font-family:sans-serif;"><div style="font-weight:bold;font-size:24px;margin-bottom:8px;">${bidder.toUpperCase()}</div><div style="color:#60a5fa;font-size:18px;">WINNING BID: ${cpm}</div><div style="font-size:12px;margin-top:12px;opacity:0.7;">Rendered via BidLab Mock Adapter</div></div></body></html>`,
+                        width: 300,
+                        height: 250,
+                        adUnitCode: 'ad-slot-1'
+                    };
+                    window._simulatedBids.push(mockBid);
+                    addLog(`Inbound bid from adapter: ${bidder}`, "event");
+                    resolve();
+                }, latency);
+            });
         });
+
+        return Promise.all(promises);
     };
 
     const runAuction = () => {
@@ -122,13 +127,15 @@ function App() {
         setStatus("Auctioning...");
         addLog("Starting Prebid.js Auction...", "event");
         
-        // Start simulation in parallel with Prebid lifecycle
-        simulateBidding();
+        // Start simulation
+        const simulationPromise = simulateBidding();
 
         window.pbjs.que.push(() => {
             window.pbjs.requestBids({
                 timeout: PREBID_TIMEOUT,
-                bidsBackHandler: (bids) => {
+                bidsBackHandler: async (bids) => {
+                    // Ensure simulation is finished before handling bids
+                    await simulationPromise;
                     handleBids(bids);
                 }
             });
