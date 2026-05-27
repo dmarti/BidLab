@@ -129,6 +129,35 @@ function App() {
         setWinner(null);
         setStatus("Auctioning...");
         addLog("Starting Prebid.js Auction...", "event");
+
+        // Log OpenRTB BidRequest for debugging
+        const openRtbRequest = {
+            id: `req-${Math.random().toString(36).substring(2, 10)}`,
+            at: 2,
+            tmax: PREBID_TIMEOUT,
+            imp: [{
+                id: "1",
+                banner: {
+                    w: 300,
+                    h: 250,
+                    format: [{w: 300, h: 250}]
+                },
+                bidfloor: 0.10
+            }],
+            site: {
+                id: "bidlab-demo",
+                domain: "bidlab.ai",
+                page: window.location.href
+            },
+            device: {
+                ua: navigator.userAgent,
+                language: navigator.language
+            },
+            user: {
+                id: "user-mock-123"
+            }
+        };
+        addLog("OpenRTB BidRequest generated", "event", openRtbRequest);
         
         // Start simulation
         const simulationPromise = simulateBidding();
