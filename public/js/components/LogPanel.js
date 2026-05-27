@@ -1,13 +1,21 @@
-import { html, useEffect, useRef } from '../preact-config.js';
+import { html, useEffect, useRef, useState } from '../preact-config.js';
 
 const LogPanel = ({ logs }) => {
     const logEndRef = useRef(null);
+    const [expandedLogs, setExpandedLogs] = useState({});
 
     useEffect(() => {
         if (logEndRef.current) {
             logEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
     }, [logs]);
+
+    const toggleExpand = (index) => {
+        setExpandedLogs(prev => ({
+            ...prev,
+            [index]: !prev[index]
+        }));
+    };
 
     return html`
         <div class="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[500px] lg:h-[650px]">
@@ -36,19 +44,40 @@ const LogPanel = ({ logs }) => {
                         </div>
                     `}
                     ${logs.map((log, index) => html`
-                        <div key=${index} class="flex gap-4 leading-relaxed group border-b border-slate-800/30 pb-1.5 last:border-0">
-                            <span class="flex-shrink-0 text-slate-500 select-none text-[10px] pt-1 w-24 font-bold tabular-nums">
-                                [${log.ts}]
-                            </span>
-                            <span class=${`
-                                ${log.type === 'event' ? 'text-blue-400' : ''}
-                                ${log.type === 'bid' ? 'text-emerald-400' : ''}
-                                ${log.type === 'error' ? 'text-rose-400 font-bold' : ''}
-                                break-all
-                            `}>
-                                <span class="opacity-50 mr-1.5 text-slate-500 select-none">$</span>
-                                ${log.msg}
-                            </span>
+                        <div key=${index} class="flex flex-col border-b border-slate-800/30 pb-1.5 last:border-0 group">
+                            <div class="flex gap-4 leading-relaxed items-start">
+                                <span class="flex-shrink-0 text-slate-500 select-none text-[10px] pt-1 w-24 font-bold tabular-nums">
+                                    [${log.ts}]
+                                </span>
+                                <div class="flex-grow flex flex-col">
+                                    <div class="flex items-center gap-2">
+                                        <span class=${`
+                                            ${log.type === 'event' ? 'text-blue-400' : ''}
+                                            ${log.type === 'bid' ? 'text-emerald-400' : ''}
+                                            ${log.type === 'error' ? 'text-rose-400 font-bold' : ''}
+                                            break-all
+                                        `}>
+                                            <span class="opacity-50 mr-1.5 text-slate-500 select-none">$</span>
+                                            ${log.msg}
+                                        </span>
+                                        ${log.details && html`
+                                            <button 
+                                                onClick=${() => toggleExpand(index)}
+                                                class="text-[10px] text-bidlab-400 hover:text-bidlab-300 underline font-bold uppercase tracking-tighter"
+                                            >
+                                                ${expandedLogs[index] ? '[Hide Details]' : '[Show Details]'}
+                                            </button>
+                                        `}
+                                    </div>
+                                    ${log.details && expandedLogs[index] && html`
+                                        <div class="mt-2 p-3 bg-slate-900 rounded-lg border border-slate-800 overflow-x-auto">
+                                            <pre class="text-[11px] text-slate-400 leading-tight">
+                                                ${JSON.stringify(log.details, null, 2)}
+                                            </pre>
+                                        </div>
+                                    `}
+                                </div>
+                            </div>
                         </div>
                     `)}
                     <div ref=${logEndRef} />

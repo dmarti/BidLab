@@ -10,12 +10,12 @@ function App() {
     const [winner, setWinner] = useState(null);
     const [isAuctionRunning, setIsAuctionRunning] = useState(false);
 
-    const addLog = useCallback((msg, type = 'event') => {
+    const addLog = useCallback((msg, type = 'event', details = null) => {
         const now = new Date();
         const timeStr = now.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
         const ms = now.getMilliseconds().toString().padStart(3, '0');
         const ts = `${timeStr}.${ms}`;
-        setLogs(prevLogs => [...prevLogs, { ts, msg, type }]);
+        setLogs(prevLogs => [...prevLogs, { ts, msg, type, details }]);
     }, []);
 
     const trackEvent = useCallback((eventName, data) => {
@@ -67,7 +67,7 @@ function App() {
         finalBids.sort((a, b) => b.cpm - a.cpm);
         
         finalBids.forEach(bid => {
-            addLog(`Bid: ${bid.bidder} - ${bid.cpm.toFixed(2)} (${bid.timeToRespond}ms)`, "bid");
+            addLog(`Bid: ${bid.bidder} - ${bid.cpm.toFixed(2)} (${bid.timeToRespond}ms)`, "bid", bid);
         });
 
         const highestBid = finalBids[0];
@@ -110,7 +110,7 @@ function App() {
                         adUnitCode: 'ad-slot-1'
                     };
                     window._simulatedBids.push(mockBid);
-                    addLog(`Inbound bid from adapter: ${bidder}`, "event");
+                    addLog(`Inbound bid from adapter: ${bidder}`, "event", mockBid);
                     resolve();
                 }, latency);
             });
