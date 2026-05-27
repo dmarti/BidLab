@@ -67,7 +67,7 @@ function App() {
         finalBids.sort((a, b) => b.cpm - a.cpm);
         
         finalBids.forEach(bid => {
-            addLog(`Bid: ${bid.bidder} - ${bid.cpm.toFixed(2)} (${bid.timeToRespond}ms)`, "bid", bid);
+            addLog(`Bid: ${bid.bidder} - ${bid.cpm.toFixed(2)} (${bid.timeToRespond}ms)`, "bid", bid.ortbBid || bid);
         });
 
         const highestBid = finalBids[0];
@@ -100,17 +100,38 @@ function App() {
                 const latency = Math.floor(Math.random() * 800) + 100;
                 
                 setTimeout(() => {
+                    // Create OpenRTB 2.6 compliant BidResponse
+                    const openRtbBidResponse = {
+                        id: `resp-${Math.random().toString(36).substring(2, 10)}`,
+                        seatbid: [{
+                            seat: bidder,
+                            bid: [{
+                                id: `bid-${Math.random().toString(36).substring(2, 10)}`,
+                                impid: "1",
+                                price: parseFloat(cpm),
+                                adm: `<html><body style="margin:0;padding:0;background:#0f172a;display:flex;align-items:center;justify-content:center;height:250px;border:2px solid #3b82f6;border-radius:8px;box-sizing:border-box;"><div style="text-align:center;color:white;font-family:sans-serif;"><div style="font-weight:bold;font-size:24px;margin-bottom:8px;">${bidder.toUpperCase()}</div><div style="color:#60a5fa;font-size:18px;">WINNING BID: ${cpm}</div><div style="font-size:12px;margin-top:12px;opacity:0.7;">Rendered via BidLab Mock Adapter</div></div></body></html>`,
+                                crid: `crid-${bidder}-001`,
+                                w: 300,
+                                h: 250,
+                                adomain: [`${bidder}.com`]
+                            }]
+                        }],
+                        cur: "USD"
+                    };
+
                     const mockBid = {
                         bidder: bidder,
                         cpm: parseFloat(cpm),
                         timeToRespond: latency,
-                        ad: `<html><body style="margin:0;padding:0;background:#0f172a;display:flex;align-items:center;justify-content:center;height:250px;border:2px solid #3b82f6;border-radius:8px;box-sizing:border-box;"><div style="text-align:center;color:white;font-family:sans-serif;"><div style="font-weight:bold;font-size:24px;margin-bottom:8px;">${bidder.toUpperCase()}</div><div style="color:#60a5fa;font-size:18px;">WINNING BID: ${cpm}</div><div style="font-size:12px;margin-top:12px;opacity:0.7;">Rendered via BidLab Mock Adapter</div></div></body></html>`,
+                        ad: openRtbBidResponse.seatbid[0].bid[0].adm,
                         width: 300,
                         height: 250,
-                        adUnitCode: 'ad-slot-1'
+                        adUnitCode: 'ad-slot-1',
+                        ortbBid: openRtbBidResponse.seatbid[0].bid[0]
                     };
+                    
                     window._simulatedBids.push(mockBid);
-                    addLog(`Inbound bid from adapter: ${bidder}`, "event", mockBid);
+                    addLog(`Inbound bid from adapter: ${bidder}`, "event", openRtbBidResponse);
                     resolve();
                 }, latency);
             });
