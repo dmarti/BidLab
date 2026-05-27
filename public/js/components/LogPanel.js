@@ -36,8 +36,8 @@ const LogPanel = ({ logs }) => {
                         </div>
                     `}
                     ${logs.map((log, index) => html`
-                        <div key=${index} class="flex gap-3 leading-relaxed group">
-                            <span class="flex-shrink-0 text-slate-600 select-none text-xs pt-0.5 w-16">
+                        <div key=${index} class="flex gap-4 leading-relaxed group border-b border-slate-800/30 pb-1.5 last:border-0">
+                            <span class="flex-shrink-0 text-slate-500 select-none text-[10px] pt-1 w-24 font-bold tabular-nums">
                                 [${log.ts}]
                             </span>
                             <span class=${`
