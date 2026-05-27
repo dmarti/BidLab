@@ -16,18 +16,9 @@ function App() {
     }, []);
 
     const trackEvent = useCallback((eventName, data) => {
-        // Mock tracking function to track KPIs like 'demo_complete'
-        console.log(`[Mock Tracker] Event: ${eventName}`, data);
-        addLog(`KPI Tracked: ${eventName}`, "event");
-        
-        // In a real app, this would send data to an analytics endpoint
-        // fetch('/api/track', { method: 'POST', body: JSON.stringify({ eventName, data }) });
+        console.log(`[KPI Tracker] Event: ${eventName}`, data);
+        addLog(`KPI Logged: ${eventName}`, "event");
     }, [addLog]);
-
-    const requestConsulting = () => {
-        trackEvent('consulting_request', { timestamp: Date.now() });
-        alert("Consultation request received! Our ad tech experts will contact you shortly.");
-    };
 
     useEffect(() => {
         const pbjs = window.pbjs || {};
@@ -41,18 +32,9 @@ function App() {
                 }
             },
             bids: [
-                {
-                    bidder: 'appnexus',
-                    params: { placementId: 13144370 }
-                },
-                {
-                    bidder: 'rubicon',
-                    params: { accountId: 14062, siteId: 70608, zoneId: 335918 }
-                },
-                {
-                    bidder: 'openx',
-                    params: { unit: '538073155', delDomain: 'se-demo-d.openx.net' }
-                }
+                { bidder: 'appnexus', params: { placementId: 13144370 } },
+                { bidder: 'rubicon', params: { accountId: 14062, siteId: 70608, zoneId: 335918 } },
+                { bidder: 'openx', params: { unit: '538073155', delDomain: 'se-demo-d.openx.net' } }
             ]
         }];
 
@@ -62,100 +44,94 @@ function App() {
                 priceGranularity: 'medium',
                 debug: true
             });
-            addLog("BidLab Engine Initialized", "event");
-            addLog("Adapters loaded: AppNexus, Rubicon, OpenX", "event");
+            addLog("BidLab Prebid Engine Initialized", "event");
         });
     }, [addLog]);
 
-    const handleBids = useCallback(() => {
-        const pbjs = window.pbjs;
-        addLog("All bids received or timeout reached", "event");
+    const handleBids = useCallback((bidResponses) => {
+        addLog("Auction lifecycle complete", "event");
         
-        const responses = pbjs.getBidResponses();
+        // In this demo, we use a hybrid approach:
+        // 1. We look at real Prebid responses (if any)
+        // 2. We supplement with our own simulated bidders for the demonstration
+        
+        const responses = window.pbjs.getBidResponses();
         const slotBids = responses['ad-slot-1'] ? responses['ad-slot-1'].bids : [];
         
-        slotBids.forEach(bid => {
-            addLog(`Bid from ${bid.bidder}: $${bid.cpm} (${bid.timeToRespond}ms)`, "bid");
+        // Merge with simulated bids if no real ones came back (common in local dev)
+        const finalBids = slotBids.length > 0 ? slotBids : (window._simulatedBids || []);
+        
+        finalBids.sort((a, b) => b.cpm - a.cpm);
+        
+        finalBids.forEach(bid => {
+            addLog(`Bid: ${bid.bidder} - $${bid.cpm.toFixed(2)} (${bid.timeToRespond}ms)`, "bid");
         });
 
-        const highestBid = pbjs.getHighestCpmBids('ad-slot-1')[0];
+        const highestBid = finalBids[0];
         
         if (highestBid) {
-            addLog(`Winner Selected: ${highestBid.bidder} at $${highestBid.cpm}`, "bid");
+            addLog(`Winner: ${highestBid.bidder} ($${highestBid.cpm.toFixed(2)})`, "bid");
             setWinner(highestBid);
             setStatus(`Served by ${highestBid.bidder}`);
-            addLog(`Creative rendered via ${highestBid.bidder} adapter`, "event");
             
-            // Track successful auction completion for KPI tracking
             trackEvent('demo_complete', {
                 bidder: highestBid.bidder,
-                cpm: highestBid.cpm,
-                latency: highestBid.timeToRespond
+                cpm: highestBid.cpm
             });
         } else {
-            addLog("Auction failed: No bids returned", "error");
+            addLog("No bids returned - simulation failed", "error");
             setStatus("No Bids");
         }
         setIsAuctionRunning(false);
     }, [addLog, trackEvent]);
 
-    const injectMockBids = () => {
-        const pbjs = window.pbjs;
-        const mockBidders = ['appnexus', 'rubicon', 'openx'];
+    const simulateBidding = () => {
+        const bidders = ['appnexus', 'rubicon', 'openx'];
+        window._simulatedBids = [];
         
-        mockBidders.forEach(bidder => {
-            const cpm = (Math.random() * 10 + 1).toFixed(2);
-            const latency = Math.floor(Math.random() * 600) + 200;
+        addLog("Simulating distributed bid adapters...", "event");
+        
+        bidders.forEach(bidder => {
+            const cpm = (Math.random() * 8 + 2).toFixed(2);
+            const latency = Math.floor(Math.random() * 800) + 100;
             
             setTimeout(() => {
-                const bid = {
-                    bidderCode: bidder,
+                const mockBid = {
+                    bidder: bidder,
+                    cpm: parseFloat(cpm),
+                    timeToRespond: latency,
+                    ad: `<html><body style="margin:0;padding:0;background:#0f172a;display:flex;align-items:center;justify-content:center;height:250px;border:2px solid #3b82f6;border-radius:8px;box-sizing:border-box;"><div style="text-align:center;color:white;font-family:sans-serif;"><div style="font-weight:bold;font-size:24px;margin-bottom:8px;">${bidder.toUpperCase()}</div><div style="color:#60a5fa;font-size:18px;">WINNING BID: $${cpm}</div><div style="font-size:12px;margin-top:12px;opacity:0.7;">Rendered via BidLab Mock Adapter</div></div></body></html>`,
                     width: 300,
                     height: 250,
-                    statusMessage: 'Bid available',
-                    adId: Math.random().toString(36).substring(2, 15),
-                    cpm: parseFloat(cpm),
-                    ad: `<html><body style="margin:0;padding:0;background:#0f172a;display:flex;align-items:center;justify-content:center;height:250px;border:2px solid #3b82f6;border-radius:8px;box-sizing:border-box;"><div style="text-align:center;color:white;font-family:sans-serif;"><div style="font-weight:bold;font-size:24px;margin-bottom:8px;">${bidder.toUpperCase()}</div><div style="color:#60a5fa;font-size:18px;">WINNING BID: ${cpm}</div><div style="font-size:12px;margin-top:12px;opacity:0.7;">Rendered via BidLab Mock Adapter</div></div></body></html>`,
-                    currency: 'USD',
-                    netRevenue: true,
-                    ttl: 300,
-                    creativeId: 'mock-creative-' + bidder,
-                    requestId: 'mock-req-' + bidder,
-                    auctionId: 'mock-auc-' + bidder,
-                    transactionId: 'mock-tx-' + bidder,
-                    responseTimestamp: Date.now(),
-                    requestTimestamp: Date.now() - latency,
-                    bidder: bidder,
-                    timeToRespond: latency,
-                    size: '300x250',
                     adUnitCode: 'ad-slot-1'
                 };
-                pbjs.addBidResponse('ad-slot-1', bid);
-                addLog(`Mock bid received: ${bidder} (${cpm})`, "bid");
+                window._simulatedBids.push(mockBid);
+                addLog(`Inbound bid from adapter: ${bidder}`, "event");
             }, latency);
         });
     };
 
     const runAuction = () => {
-        const pbjs = window.pbjs;
-        if (!pbjs) {
-            addLog("Error: Prebid.js not loaded", "error");
+        if (!window.pbjs) {
+            addLog("Error: Prebid.js library blocked or missing", "error");
             return;
         }
+        
         setIsAuctionRunning(true);
         setWinner(null);
         setStatus("Auctioning...");
-        addLog("Auction Started", "event");
+        addLog("Starting Prebid.js Auction...", "event");
         
-        pbjs.que.push(() => {
-            pbjs.requestBids({
+        // Start simulation in parallel with Prebid lifecycle
+        simulateBidding();
+
+        window.pbjs.que.push(() => {
+            window.pbjs.requestBids({
                 timeout: PREBID_TIMEOUT,
-                bidsBackHandler: () => {
-                    handleBids();
+                bidsBackHandler: (bids) => {
+                    handleBids(bids);
                 }
             });
-            // Inject mock bids to ensure the demo always has winners
-            injectMockBids();
         });
     };
 
@@ -165,7 +141,6 @@ function App() {
 
     return html`
         <div class="min-h-screen bg-slate-900 text-slate-200 font-sans selection:bg-bidlab-500/30">
-            {/* Background Decorative Elements */}
             <div class="fixed inset-0 overflow-hidden pointer-events-none">
                 <div class="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-bidlab-900/20 rounded-full blur-[120px]"></div>
                 <div class="absolute top-[60%] -right-[5%] w-[30%] h-[40%] bg-blue-900/10 rounded-full blur-[100px]"></div>
@@ -185,7 +160,7 @@ function App() {
                             </h1>
                         </div>
                         <p class="text-slate-400 text-lg max-w-md">
-                            Header Bidding Real-Time Demonstration & Interactive Lab.
+                            Interactive Header Bidding Demonstration & Debugger.
                         </p>
                     </div>
 
@@ -199,70 +174,80 @@ function App() {
                                 : 'bg-bidlab-600 hover:bg-bidlab-500 text-white hover:scale-[1.02] active:scale-[0.98] shadow-bidlab-600/20'
                             }`}
                         >
-                            ${isAuctionRunning && html`
-                                <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                            `}
-                            ${isAuctionRunning ? 'Auction in Progress...' : 'Trigger Auction'}
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" class=${`w-5 h-5 ${isAuctionRunning ? 'animate-spin' : ''}`}>
+                                <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                <path d="M12 7v5l3 3" />
+                            </svg>
+                            ${isAuctionRunning ? 'Auctioning...' : 'Run Auction'}
                         </button>
                         <button 
                             onClick=${resetDemo}
-                            class="px-6 py-3 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700"
+                            class="px-6 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold transition-all duration-200 border border-slate-700 shadow-lg"
                         >
-                            Reset Lab
-                        </button>
-                        <button 
-                            onClick=${requestConsulting}
-                            class="px-6 py-3 rounded-xl font-bold bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 transition-all border border-blue-500/30"
-                        >
-                            Request Consulting
+                            Reset
                         </button>
                     </div>
                 </header>
 
                 <main class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    {/* Left Column: Log Panel */}
-                    <div class="lg:col-span-7 order-2 lg:order-1">
-                        <${LogPanel} logs=${logs} />
+                    <!-- Left Column: Ad Canvas -->
+                    <div class="lg:col-span-7 xl:col-span-8 space-y-8">
+                        <div class="bg-slate-800/50 rounded-3xl p-8 border border-slate-700/50 backdrop-blur-sm shadow-xl">
+                            <div class="flex items-center justify-between mb-8">
+                                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                    Live Ad Canvas
+                                </h2>
+                                <div class="px-4 py-1.5 rounded-full bg-slate-900/80 border border-slate-700 text-xs font-mono text-slate-400">
+                                    Slot: 300x250_BTF
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-center">
+                                <${AdSlot} 
+                                    id="ad-slot-1" 
+                                    winner=${winner} 
+                                    status=${status}
+                                />
+                            </div>
+                        </div>
+
+                        <!-- Info Cards -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="p-6 bg-slate-800/30 rounded-2xl border border-slate-700/50">
+                                <h3 class="text-sm font-bold text-bidlab-400 uppercase tracking-wider mb-2">Price Granularity</h3>
+                                <p class="text-slate-400 text-sm italic font-serif">"medium" ($0.10 steps)</p>
+                            </div>
+                            <div class="p-6 bg-slate-800/30 rounded-2xl border border-slate-700/50">
+                                <h3 class="text-sm font-bold text-bidlab-400 uppercase tracking-wider mb-2">Timeout</h3>
+                                <p class="text-slate-400 text-sm italic font-serif">${PREBID_TIMEOUT}ms</p>
+                            </div>
+                        </div>
                     </div>
 
-                    {/* Right Column: Ad Slot & Info */}
-                    <div class="lg:col-span-5 order-1 lg:order-2 space-y-6">
-                        <${AdSlot} winner=${winner} status=${status} />
+                    <!-- Right Column: Monitoring -->
+                    <div class="lg:col-span-5 xl:col-span-4 space-y-6">
+                        <${LogPanel} logs=${logs} />
                         
-                        <div class="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl backdrop-blur-sm">
-                            <h3 class="text-white font-bold mb-4 flex items-center gap-2">
-                                <svg class="w-5 h-5 text-bidlab-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Lab Mechanics
-                            </h3>
-                            <ul class="space-y-3 text-sm text-slate-400">
-                                <li class="flex gap-3">
-                                    <span class="flex-shrink-0 w-6 h-6 bg-slate-700 text-slate-300 rounded-full flex items-center justify-center text-xs font-bold">1</span>
-                                    <p><strong class="text-slate-200">Prebid.js</strong> initializes and registers ad units in the window queue.</p>
-                                </li>
-                                <li class="flex gap-3">
-                                    <span class="flex-shrink-0 w-6 h-6 bg-slate-700 text-slate-300 rounded-full flex items-center justify-center text-xs font-bold">2</span>
-                                    <p><strong class="text-slate-200">Concurrent Requests</strong> are sent to multiple mock demand sources simultaneously.</p>
-                                </li>
-                                <li class="flex gap-3">
-                                    <span class="flex-shrink-0 w-6 h-6 bg-slate-700 text-slate-300 rounded-full flex items-center justify-center text-xs font-bold">3</span>
-                                    <p><strong class="text-slate-200">Unified Auction</strong> happens in-browser, selecting the highest valid bid.</p>
-                                </li>
-                                <li class="flex gap-3">
-                                    <span class="flex-shrink-0 w-6 h-6 bg-slate-700 text-slate-300 rounded-full flex items-center justify-center text-xs font-bold">4</span>
-                                    <p><strong class="text-slate-200">Instant Rendering</strong> occurs as the winning creative is injected into the secure iframe.</p>
-                                </li>
-                            </ul>
+                        <!-- CTA Card -->
+                        <div class="bg-gradient-to-br from-bidlab-600 to-blue-700 rounded-3xl p-6 shadow-xl shadow-bidlab-900/20 text-white relative overflow-hidden group">
+                            <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-500"></div>
+                            <h3 class="text-xl font-black mb-2 relative z-10">Need a Custom Setup?</h3>
+                            <p class="text-blue-100 text-sm mb-6 relative z-10 opacity-90">
+                                We help publishers build complex Prebid integrations for Video, Native, and AMP.
+                            </p>
+                            <button 
+                                onClick=${() => alert("Consultation request received! Our ad tech experts will contact you shortly.")}
+                                class="w-full py-3 bg-white text-bidlab-700 font-black rounded-xl hover:bg-blue-50 transition-colors shadow-lg relative z-10"
+                            >
+                                Contact Experts
+                            </button>
                         </div>
                     </div>
                 </main>
-
-                <footer class="mt-16 text-center text-slate-500 text-sm border-t border-slate-800 pt-8">
-                    <p>© 2026 BidLab • Interactive Prebid Documentation Environment</p>
+                
+                <footer class="mt-16 text-center text-slate-500 text-sm pb-8">
+                    <p>© 2026 BidLab • Built with Preact & Prebid.js</p>
                 </footer>
             </div>
         </div>
