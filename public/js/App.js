@@ -11,7 +11,10 @@ function App() {
     const [isAuctionRunning, setIsAuctionRunning] = useState(false);
 
     const addLog = useCallback((msg, type = 'event') => {
-        const ts = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const ms = now.getMilliseconds().toString().padStart(3, '0');
+        const ts = `${timeStr}.${ms}`;
         setLogs(prevLogs => [...prevLogs, { ts, msg, type }]);
     }, []);
 
