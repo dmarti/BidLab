@@ -20,7 +20,15 @@ function App() {
         // Mock tracking function to track KPIs like 'demo_complete'
         console.log(`[Mock Tracker] Event: ${eventName}`, data);
         addLog(`KPI Tracked: ${eventName}`, "event");
+        
+        // In a real app, this would send data to an analytics endpoint
+        // fetch('/api/track', { method: 'POST', body: JSON.stringify({ eventName, data }) });
     }, [addLog]);
+
+    const requestConsulting = () => {
+        trackEvent('consulting_request', { timestamp: Date.now() });
+        alert("Consultation request received! Our ad tech experts will contact you shortly.");
+    };
 
     useEffect(() => {
         const pbjs = window.pbjs || {};
@@ -205,6 +213,12 @@ function App() {
                             className="px-6 py-3 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700"
                         >
                             Reset Lab
+                        </button>
+                        <button 
+                            onClick={requestConsulting}
+                            className="px-6 py-3 rounded-xl font-bold bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 transition-all border border-blue-500/30"
+                        >
+                            Request Consulting
                         </button>
                     </div>
                 </header>

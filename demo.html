@@ -35,6 +35,17 @@
     <!-- Prebid.js -->
     <script async src="https://acdn.adnxs.com/prebid/not-for-prod/prebid.js"></script>
 
+    <!-- Import Map to handle bare specifiers in unpkg modules -->
+    <script type="importmap">
+      {
+        "imports": {
+          "preact": "https://unpkg.com/preact@10.23.1/dist/preact.module.js",
+          "preact/hooks": "https://unpkg.com/preact@10.23.1/hooks/dist/hooks.module.js",
+          "htm": "https://unpkg.com/htm@3.1.1/dist/htm.module.js"
+        }
+      }
+    </script>
+
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
       
@@ -64,6 +75,6 @@
   <body>
     <div id="root"></div>
     <!-- Load the build-less Preact app -->
-    <script type="module" src="/public/js/main.js"></script>
+    <script type="module" src="public/js/main.js"></script>
   </body>
 </html>

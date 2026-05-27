@@ -149,13 +149,6 @@
                 const slot = slotRef.current;
                 slot.innerHTML = '';
                 
-                const mockAds = [
-                    { title: 'CloudScale Pro', desc: 'Enterprise infrastructure that grows with your business needs.', img: 'https://picsum.photos/seed/tech/300/150' },
-                    { title: 'EcoBrew Coffee', desc: 'Sustainable, organic beans delivered fresh to your doorstep.', img: 'https://picsum.photos/seed/coffee/300/150' },
-                    { title: 'DevFlow 2.0', desc: 'The ultimate toolkit for modern web developers.', img: 'https://picsum.photos/seed/design/300/150' }
-                ];
-                const ad = mockAds[Math.floor(Math.random() * mockAds.length)];
-
                 const iframe = document.createElement('iframe');
                 iframe.width = 300;
                 iframe.height = 250;
@@ -166,32 +159,46 @@
 
                 const iframeDoc = iframe.contentWindow.document;
                 iframeDoc.open();
-                iframeDoc.write(`
-                    <style>
-                        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; cursor: pointer; overflow: hidden; background: #fff; }
-                        .ad { width: 300px; height: 250px; display: flex; flex-direction: column; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; position: relative; }
-                        img { width: 300px; height: 135px; object-fit: cover; }
-                        .content { padding: 12px; }
-                        .title { font-weight: 800; font-size: 15px; margin-bottom: 2px; color: #0f172a; }
-                        .desc { font-size: 12px; color: #64748b; line-height: 1.3; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-                        .footer { display: flex; justify-content: space-between; align-items: center; }
-                        .cta { background: #0284c7; color: white; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.025em; }
-                        .provider { font-size: 9px; color: #94a3b8; font-weight: 600; }
-                        .bidder-tag { position: absolute; top: 8px; right: 8px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); color: white; font-size: 9px; padding: 2px 8px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); }
-                    </style>
-                    <div class="ad">
-                        <div class="bidder-tag">${bid.bidder.toUpperCase()} WINNER</div>
-                        <img src="${ad.img}" alt="Ad">
-                        <div class="content">
-                            <div class="title">${ad.title}</div>
-                            <div class="desc">${ad.desc}</div>
-                            <div class="footer">
-                                <div class="cta">Learn More</div>
-                                <div class="provider">Ads by BidLab</div>
+                
+                if (bid.ad && bid.ad.includes('<html')) {
+                    // Use the actual creative content from the bid
+                    iframeDoc.write(bid.ad);
+                } else {
+                    // Fallback to mock ad if no 'ad' property is present or it's just a placeholder
+                    const mockAds = [
+                        { title: 'CloudScale Pro', desc: 'Enterprise infrastructure that grows with your business needs.', img: 'https://picsum.photos/seed/tech/300/150' },
+                        { title: 'EcoBrew Coffee', desc: 'Sustainable, organic beans delivered fresh to your doorstep.', img: 'https://picsum.photos/seed/coffee/300/150' },
+                        { title: 'DevFlow 2.0', desc: 'The ultimate toolkit for modern web developers.', img: 'https://picsum.photos/seed/design/300/150' }
+                    ];
+                    const ad = mockAds[Math.floor(Math.random() * mockAds.length)];
+
+                    iframeDoc.write(`
+                        <style>
+                            body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; cursor: pointer; overflow: hidden; background: #fff; }
+                            .ad { width: 300px; height: 250px; display: flex; flex-direction: column; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; position: relative; }
+                            img { width: 300px; height: 135px; object-fit: cover; }
+                            .content { padding: 12px; }
+                            .title { font-weight: 800; font-size: 15px; margin-bottom: 2px; color: #0f172a; }
+                            .desc { font-size: 12px; color: #64748b; line-height: 1.3; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+                            .footer { display: flex; justify-content: space-between; align-items: center; }
+                            .cta { background: #0284c7; color: white; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.025em; }
+                            .provider { font-size: 9px; color: #94a3b8; font-weight: 600; }
+                            .bidder-tag { position: absolute; top: 8px; right: 8px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); color: white; font-size: 9px; padding: 2px 8px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); }
+                        </style>
+                        <div class="ad">
+                            <div class="bidder-tag">${bid.bidder.toUpperCase()} WINNER</div>
+                            <img src="${ad.img}" alt="Ad">
+                            <div class="content">
+                                <div class="title">${ad.title}</div>
+                                <div class="desc">${ad.desc}</div>
+                                <div class="footer">
+                                    <div class="cta">Learn More</div>
+                                    <div class="provider">Ads by BidLab</div>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                `);
+                    `);
+                }
                 iframeDoc.close();
             };
 
@@ -267,7 +274,15 @@
             const trackEvent = useCallback((eventName, data) => {
                 console.log(`[Mock Tracker] Event: ${eventName}`, data);
                 addLog(`KPI Tracked: ${eventName}`, "event");
+                
+                // In a real app, this would send data to an analytics endpoint
+                // fetch('/api/track', { method: 'POST', body: JSON.stringify({ eventName, data }) });
             }, [addLog]);
+
+            const requestConsulting = () => {
+                trackEvent('consulting_request', { timestamp: Date.now() });
+                alert("Consultation request received! Our ad tech experts will contact you shortly.");
+            };
 
             useEffect(() => {
                 const pbjs = window.pbjs || {};
@@ -338,7 +353,7 @@
                             statusMessage: 'Bid available',
                             adId: Math.random().toString(36).substring(2, 15),
                             cpm: parseFloat(cpm),
-                            ad: bidder.toUpperCase(), // Prebid uses this if ad is not provided, but we'll use it to signal winner
+                            ad: `<html><body style="margin:0;padding:0;background:#0f172a;display:flex;align-items:center;justify-content:center;height:250px;border:2px solid #3b82f6;border-radius:8px;box-sizing:border-box;"><div style="text-align:center;color:white;font-family:sans-serif;"><div style="font-weight:bold;font-size:24px;margin-bottom:8px;">${bidder.toUpperCase()}</div><div style="color:#60a5fa;font-size:18px;">WINNING BID: ${cpm}</div><div style="font-size:12px;margin-top:12px;opacity:0.7;">Rendered via BidLab Mock Adapter</div></div></body></html>`,
                             currency: 'USD',
                             netRevenue: true,
                             ttl: 300,
@@ -434,6 +449,12 @@
                                     className="px-6 py-3 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700"
                                 >
                                     Reset Lab
+                                </button>
+                                <button 
+                                    onClick={requestConsulting}
+                                    className="px-6 py-3 rounded-xl font-bold bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 transition-all border border-blue-500/30"
+                                >
+                                    Request Consulting
                                 </button>
                             </div>
                         </header>

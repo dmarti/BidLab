@@ -16,13 +16,6 @@ const AdSlot = ({ winner, status }) => {
         const slot = slotRef.current;
         slot.innerHTML = '';
         
-        const mockAds = [
-            { title: 'CloudScale Pro', desc: 'Enterprise infrastructure that grows with your business needs.', img: 'https://picsum.photos/seed/tech/300/150' },
-            { title: 'EcoBrew Coffee', desc: 'Sustainable, organic beans delivered fresh to your doorstep.', img: 'https://picsum.photos/seed/coffee/300/150' },
-            { title: 'DevFlow 2.0', desc: 'The ultimate toolkit for modern web developers.', img: 'https://picsum.photos/seed/design/300/150' }
-        ];
-        const ad = mockAds[Math.floor(Math.random() * mockAds.length)];
-
         const iframe = document.createElement('iframe');
         iframe.width = 300;
         iframe.height = 250;
@@ -33,32 +26,46 @@ const AdSlot = ({ winner, status }) => {
 
         const iframeDoc = iframe.contentWindow.document;
         iframeDoc.open();
-        iframeDoc.write(`
-            <style>
-                body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; cursor: pointer; overflow: hidden; background: #fff; }
-                .ad { width: 300px; height: 250px; display: flex; flex-direction: column; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; position: relative; }
-                img { width: 300px; height: 135px; object-fit: cover; }
-                .content { padding: 12px; }
-                .title { font-weight: 800; font-size: 15px; margin-bottom: 2px; color: #0f172a; }
-                .desc { font-size: 12px; color: #64748b; line-height: 1.3; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-                .footer { display: flex; justify-content: space-between; align-items: center; }
-                .cta { background: #0284c7; color: white; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.025em; }
-                .provider { font-size: 9px; color: #94a3b8; font-weight: 600; }
-                .bidder-tag { position: absolute; top: 8px; right: 8px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); color: white; font-size: 9px; padding: 2px 8px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); }
-            </style>
-            <div class="ad">
-                <div class="bidder-tag">${bid.bidder.toUpperCase()} WINNER</div>
-                <img src="${ad.img}" alt="Ad">
-                <div class="content">
-                    <div class="title">${ad.title}</div>
-                    <div class="desc">${ad.desc}</div>
-                    <div class="footer">
-                        <div class="cta">Learn More</div>
-                        <div class="provider">Ads by BidLab</div>
+        
+        if (bid.ad) {
+            // Use the actual creative content from the bid
+            iframeDoc.write(bid.ad);
+        } else {
+            // Fallback to mock ad if no 'ad' property is present
+            const mockAds = [
+                { title: 'CloudScale Pro', desc: 'Enterprise infrastructure that grows with your business needs.', img: 'https://picsum.photos/seed/tech/300/150' },
+                { title: 'EcoBrew Coffee', desc: 'Sustainable, organic beans delivered fresh to your doorstep.', img: 'https://picsum.photos/seed/coffee/300/150' },
+                { title: 'DevFlow 2.0', desc: 'The ultimate toolkit for modern web developers.', img: 'https://picsum.photos/seed/design/300/150' }
+            ];
+            const ad = mockAds[Math.floor(Math.random() * mockAds.length)];
+
+            iframeDoc.write(`
+                <style>
+                    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; cursor: pointer; overflow: hidden; background: #fff; }
+                    .ad { width: 300px; height: 250px; display: flex; flex-direction: column; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; position: relative; }
+                    img { width: 300px; height: 135px; object-fit: cover; }
+                    .content { padding: 12px; }
+                    .title { font-weight: 800; font-size: 15px; margin-bottom: 2px; color: #0f172a; }
+                    .desc { font-size: 12px; color: #64748b; line-height: 1.3; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+                    .footer { display: flex; justify-content: space-between; align-items: center; }
+                    .cta { background: #0284c7; color: white; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.025em; }
+                    .provider { font-size: 9px; color: #94a3b8; font-weight: 600; }
+                    .bidder-tag { position: absolute; top: 8px; right: 8px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); color: white; font-size: 9px; padding: 2px 8px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); }
+                </style>
+                <div class="ad">
+                    <div class="bidder-tag">${bid.bidder.toUpperCase()} WINNER</div>
+                    <img src="${ad.img}" alt="Ad">
+                    <div class="content">
+                        <div class="title">${ad.title}</div>
+                        <div class="desc">${ad.desc}</div>
+                        <div class="footer">
+                            <div class="cta">Learn More</div>
+                            <div class="provider">Ads by BidLab</div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `);
+            `);
+        }
         iframeDoc.close();
     };
 
