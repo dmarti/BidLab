@@ -11,7 +11,6 @@ const LogPanel = ({ logs }) => {
 
     return html`
         <div class="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[500px] lg:h-[650px]">
-            {/* Terminal Header */}
             <div class="bg-slate-800 px-4 py-3 border-b border-slate-700 flex justify-between items-center">
                 <div class="flex gap-1.5">
                     <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
@@ -29,7 +28,6 @@ const LogPanel = ({ logs }) => {
                 </div>
             </div>
 
-            {/* Terminal Body */}
             <div class="flex-grow overflow-y-auto p-4 font-mono text-sm custom-scrollbar bg-[#0a0f1d]">
                 <div class="space-y-1.5">
                     ${logs.length === 0 && html`
@@ -57,7 +55,6 @@ const LogPanel = ({ logs }) => {
                 </div>
             </div>
 
-            {/* Terminal Footer */}
             <div class="bg-slate-800/50 px-4 py-2 border-t border-slate-700/50 flex justify-between items-center text-[10px] font-mono text-slate-500">
                 <div class="flex gap-4">
                     <span>EVENTS: ${logs.filter(l => l.type === 'event').length}</span>
