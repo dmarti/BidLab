@@ -46,12 +46,13 @@ const LogPanel = ({ logs }) => {
                     ${logs.map((log, index) => html`
                         <div key=${index} class="flex flex-col border-b border-slate-800/30 pb-1.5 last:border-0 group">
                             <div class="flex gap-4 leading-relaxed items-start">
-                                <span class="flex-shrink-0 text-slate-500 select-none text-[10px] pt-1 w-24 font-bold tabular-nums">
+                                <span class="flex-shrink-0 text-slate-500 select-none text-[11px] w-28 font-bold tabular-nums font-mono">
                                     [${log.ts}]
                                 </span>
-                                <div class="flex-grow flex flex-col">
-                                    <div class="flex items-center gap-2">
+                                <div class="flex-grow flex flex-col min-w-0">
+                                    <div class="flex items-center gap-2 flex-wrap">
                                         <span class=${`
+                                            text-[13px]
                                             ${log.type === 'event' ? 'text-blue-400' : ''}
                                             ${log.type === 'bid' ? 'text-emerald-400' : ''}
                                             ${log.type === 'error' ? 'text-rose-400 font-bold' : ''}
