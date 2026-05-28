@@ -23,6 +23,14 @@ const validateBidRequest = (bidRequest) => {
     return { valid: errors.length === 0, errors };
 };
 
+const validateBid = (bid) => {
+    const errors = [];
+    if (!bid.id) errors.push("Bid missing 'id'");
+    if (!bid.impid) errors.push("Bid missing 'impid'");
+    if (bid.price === undefined) errors.push("Bid missing 'price'");
+    return { valid: errors.length === 0, errors };
+};
+
 const validateBidResponse = (bidResponse) => {
     const errors = [];
     if (!bidResponse.id) errors.push("BidResponse missing 'id'");
@@ -34,9 +42,10 @@ const validateBidResponse = (bidResponse) => {
                 errors.push(`seatbid[${i}] missing or empty 'bid' array`);
             } else {
                 sb.bid.forEach((b, j) => {
-                    if (!b.id) errors.push(`seatbid[${i}].bid[${j}] missing 'id'`);
-                    if (!b.impid) errors.push(`seatbid[${i}].bid[${j}] missing 'impid'`);
-                    if (b.price === undefined) errors.push(`seatbid[${i}].bid[${j}] missing 'price'`);
+                    const bidResult = validateBid(b);
+                    if (!bidResult.valid) {
+                        bidResult.errors.forEach(e => errors.push(`seatbid[${i}].bid[${j}]: ${e}`));
+                    }
                     if (!b.adm) errors.push(`seatbid[${i}].bid[${j}] missing 'adm'`);
                 });
             }
@@ -78,6 +87,8 @@ const testBidResponse = {
     cur: "USD"
 };
 
+const bidResult = validateBid(testBidResponse.seatbid[0].bid[0]);
+
 const reqResult = validateBidRequest(testBidRequest);
 const resResult = validateBidResponse(testBidResponse);
 
@@ -87,7 +98,10 @@ if (!reqResult.valid) console.error("Req Errors:", reqResult.errors);
 console.log("BidResponse Valid:", resResult.valid);
 if (!resResult.valid) console.error("Res Errors:", resResult.errors);
 
-if (!reqResult.valid || !resResult.valid) {
+console.log("Individual Bid Valid:", bidResult.valid);
+if (!bidResult.valid) console.error("Bid Errors:", bidResult.errors);
+
+if (!reqResult.valid || !resResult.valid || !bidResult.valid) {
     process.exit(1);
 } else {
     console.log("All OpenRTB compliance tests passed.");

@@ -17,6 +17,85 @@ const LogPanel = ({ logs }) => {
         }));
     };
 
+    const getOpenRtbDocUrl = (line) => {
+        const match = line.match(/^\s*"([^"]+)":/);
+        if (!match) return null;
+        
+        const key = match[1];
+        const baseUrl = "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/develop/2.6.md";
+        
+        const mapping = {
+            // BidRequest
+            "id": "#321---object-bidrequest-",
+            "at": "#321---object-bidrequest-",
+            "tmax": "#321---object-bidrequest-",
+            "imp": "#324---object-imp-",
+            "banner": "#326---object-banner-",
+            "video": "#327---object-video-",
+            "audio": "#328---object-audio-",
+            "native": "#329---object-native-",
+            "pmp": "#3210---object-pmp-",
+            "deal": "#3212---object-deal-",
+            "site": "#3213---object-site-",
+            "app": "#3214---object-app-",
+            "publisher": "#3215---object-publisher-",
+            "content": "#3216---object-content-",
+            "producer": "#3217---object-producer-",
+            "device": "#3218---object-device-",
+            "geo": "#3219---object-geo-",
+            "user": "#3220---object-user-",
+            "data": "#3221---object-data-",
+            "segment": "#3222---object-segment-",
+            
+            // BidResponse & Bid
+            "seatbid": "#421---object-bidresponse-",
+            "cur": "#421---object-bidresponse-",
+            "seat": "#422---object-seatbid-",
+            "bid": "#422---object-seatbid-",
+            "impid": "#423---object-bid-",
+            "price": "#423---object-bid-",
+            "nurl": "#423---object-bid-",
+            "adm": "#423---object-bid-",
+            "adid": "#423---object-bid-",
+            "adomain": "#423---object-bid-",
+            "bundle": "#423---object-bid-",
+            "iurl": "#423---object-bid-",
+            "cid": "#423---object-bid-",
+            "crid": "#423---object-bid-",
+            "w": "#423---object-bid-",
+            "h": "#423---object-bid-",
+            "dealid": "#423---object-bid-"
+        };
+
+        const anchor = mapping[key];
+        return anchor ? `${baseUrl}${anchor}` : null;
+    };
+
+    const renderJsonWithLinks = (details) => {
+        const jsonStr = JSON.stringify(details, null, 2);
+        const lines = jsonStr.split('\n');
+        
+        return lines.map((line, i) => {
+            const docUrl = getOpenRtbDocUrl(line);
+            return html`
+                <div key=${i} class="flex gap-2 group/line hover:bg-slate-800/50 rounded px-1 -mx-1">
+                    <pre class="text-[11px] text-slate-400 leading-tight m-0">${line}</pre>
+                    ${docUrl && html`
+                        <a 
+                            href=${docUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            class="text-[10px] text-bidlab-500 opacity-0 group-hover/line:opacity-100 transition-opacity font-bold hover:text-bidlab-400 no-underline"
+                            title="View OpenRTB Spec"
+                        >
+                            ?
+                        </a>
+                    `}
+                </div>
+            `;
+        });
+    };
+
     return html`
         <div class="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[500px] lg:h-[650px]">
             <div class="bg-slate-800 px-4 py-3 border-b border-slate-700 flex justify-between items-center">
@@ -71,10 +150,8 @@ const LogPanel = ({ logs }) => {
                                         `}
                                     </div>
                                     ${log.details && expandedLogs[index] && html`
-                                        <div class="mt-2 p-3 bg-slate-900 rounded-lg border border-slate-800 overflow-x-auto">
-                                            <pre class="text-[11px] text-slate-400 leading-tight">
-                                                ${JSON.stringify(log.details, null, 2)}
-                                            </pre>
+                                        <div class="mt-2 p-3 bg-slate-900 rounded-lg border border-slate-800 overflow-x-auto flex flex-col">
+                                            ${renderJsonWithLinks(log.details)}
                                         </div>
                                     `}
                                 </div>
