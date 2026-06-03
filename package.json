@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node tests/openrtb-validation.js",
+    "test": "node tests/openrtb-validation.js && node tests/gpp-validation.js",
     "preview": "vite preview"
   },
   "dependencies": {
