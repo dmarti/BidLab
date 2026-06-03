@@ -1,7 +1,8 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 const LogPanel = ({ logs }) => {
     const logEndRef = useRef(null);
+    const [expandedLogs, setExpandedLogs] = useState({});
 
     useEffect(() => {
         if (logEndRef.current) {
@@ -9,48 +10,142 @@ const LogPanel = ({ logs }) => {
         }
     }, [logs]);
 
-    return (
-        <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[500px] lg:h-[650px]">
-            {/* Terminal Header */}
-            <div className="bg-slate-800 px-4 py-3 border-b border-slate-700 flex justify-between items-center">
-                <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-                    <div className="w-3 h-3 rounded-full bg-amber-500/80"></div>
-                    <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+    const toggleExpand = (index) => {
+        setExpandedLogs(prev => ({
+            ...prev,
+            [index]: !prev[index]
+        }));
+    };
+
+    const getOpenRtbDocUrl = (line) => {
+        const match = line.match(/^\s*"([^"]+)":/);
+        if (!match) return null;
+        
+        const key = match[1];
+        const baseUrl = "https://github.com/InteractiveAdvertisingBureau/openrtb2.x/blob/develop/2.6.md";
+        
+        const mapping = {
+            "id": "#321---object-bidrequest-",
+            "at": "#321---object-bidrequest-",
+            "tmax": "#321---object-bidrequest-",
+            "imp": "#324---object-imp-",
+            "banner": "#326---object-banner-",
+            "regs": "#323---object-regs-",
+            "gpp": "#323---object-regs-",
+            "gpp_sid": "#323---object-regs-",
+            "gpc": "#323---object-regs-",
+            "seatbid": "#421---object-bidresponse-",
+            "bid": "#422---object-seatbid-",
+            "price": "#423---object-bid-",
+            "adm": "#423---object-bid-",
+        };
+
+        const anchor = mapping[key];
+        return anchor ? `${baseUrl}${anchor}` : null;
+    };
+
+    const renderJsonWithLinks = (details) => {
+        const jsonStr = JSON.stringify(details, null, 2);
+        const lines = jsonStr.split('\n');
+        
+        return lines.map((line, i) => {
+            const docUrl = getOpenRtbDocUrl(line);
+            return (
+                <div key={i} className="flex gap-2 group/line hover:bg-slate-800/50 rounded px-1 -mx-1">
+                    <pre className="text-[11px] text-slate-400 leading-tight m-0 font-mono">{line}</pre>
+                    {docUrl && (
+                        <a 
+                            href={docUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-[10px] text-bidlab-500 opacity-0 group-hover/line:opacity-100 transition-opacity font-bold hover:text-bidlab-400 no-underline"
+                            title="View OpenRTB Spec"
+                        >
+                            ?
+                        </a>
+                    )}
                 </div>
-                <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <span className="text-xs font-mono font-bold text-slate-400 tracking-tight">AUCTION_LIFECYCLE_DEBUGGER</span>
+            );
+        });
+    };
+
+    return (
+        <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[500px] lg:h-[650px] relative group">
+            {/* Glossy Overlay */}
+            <div className="absolute inset-0 pointer-events-none bg-gradient-to-b from-white/[0.02] to-transparent h-12"></div>
+            
+            {/* Terminal Header */}
+            <div className="bg-slate-800 px-5 py-4 border-b border-slate-700 flex justify-between items-center relative z-10">
+                <div className="flex gap-2">
+                    <div className="w-3 h-3 rounded-full bg-rose-500/80 shadow-[0_0_8px_rgba(244,63,94,0.4)]"></div>
+                    <div className="w-3 h-3 rounded-full bg-amber-500/80 shadow-[0_0_8px_rgba(245,158,11,0.4)]"></div>
+                    <div className="w-3 h-3 rounded-full bg-emerald-500/80 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-mono text-bidlab-500 bg-bidlab-500/10 px-2 py-0.5 rounded border border-bidlab-500/20">LIVE</span>
+                    <div className="flex items-center gap-2 opacity-80">
+                        <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span className="text-[10px] font-black font-mono text-slate-400 tracking-[0.2em] uppercase">Auction_Debugger_v2.6</span>
+                    </div>
+                </div>
+                <div className="flex items-center gap-3">
+                    <span className="flex items-center gap-1.5 text-[9px] font-black font-mono text-bidlab-400 bg-bidlab-500/10 px-2.5 py-1 rounded-md border border-bidlab-500/20 shadow-inner">
+                        <span className="w-1 h-1 bg-bidlab-500 rounded-full animate-ping"></span>
+                        LIVE STREAM
+                    </span>
                 </div>
             </div>
 
             {/* Terminal Body */}
-            <div className="flex-grow overflow-y-auto p-4 font-mono text-sm custom-scrollbar bg-[#0a0f1d]">
-                <div className="space-y-1.5">
+            <div className="flex-grow overflow-y-auto p-5 font-mono text-sm custom-scrollbar bg-[#050811] selection:bg-indigo-500/30">
+                <div className="space-y-2">
                     {logs.length === 0 && (
-                        <div className="text-slate-600 italic animate-pulse">
-                            &gt; Initializing debug stream...
+                        <div className="text-slate-700 italic flex items-center gap-3">
+                            <span className="animate-pulse">_</span>
+                            <span className="text-xs uppercase tracking-widest font-black">System Ready. Awaiting trigger...</span>
                         </div>
                     )}
                     {logs.map((log, index) => (
-                        <div key={index} className="flex gap-3 leading-relaxed group">
-                            <span className="flex-shrink-0 text-slate-600 select-none text-xs pt-0.5 w-16">
-                                [{log.ts}]
-                            </span>
-                            <span className={`
-                                ${log.type === 'event' ? 'text-blue-400' : ''}
-                                ${log.type === 'bid' ? 'text-emerald-400' : ''}
-                                ${log.type === 'error' ? 'text-rose-400 font-bold' : ''}
-                                break-all
-                            `}>
-                                <span className="opacity-50 mr-1.5 text-slate-500 select-none">$</span>
-                                {log.msg}
-                            </span>
+                        <div key={index} className="flex flex-col border-b border-slate-800/20 pb-2 last:border-0 group/log">
+                            <div className="flex gap-4 leading-relaxed items-start">
+                                <span className="flex-shrink-0 text-slate-600 select-none text-[10px] w-24 font-bold tabular-nums pt-0.5">
+                                    {log.ts}
+                                </span>
+                                <div className="flex-grow flex flex-col min-w-0">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        {log.type === 'privacy' && (
+                                            <span className="px-1.5 py-0.5 rounded bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 text-[9px] font-black uppercase tracking-tighter shadow-sm">Privacy</span>
+                                        )}
+                                        {log.type === 'bid' && (
+                                            <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 text-[9px] font-black uppercase tracking-tighter shadow-sm">Bid</span>
+                                        )}
+                                        <span className={`
+                                            text-[13px] font-medium
+                                            ${log.type === 'event' ? 'text-blue-300' : ''}
+                                            ${log.type === 'privacy' ? 'text-indigo-300' : ''}
+                                            ${log.type === 'bid' ? 'text-emerald-300' : ''}
+                                            ${log.type === 'error' ? 'text-rose-400 font-bold' : ''}
+                                            break-all
+                                        `}>
+                                            {log.msg}
+                                        </span>
+                                        {log.details && (
+                                            <button 
+                                                onClick={() => toggleExpand(index)}
+                                                className="ml-auto text-[9px] bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white px-2 py-0.5 rounded border border-slate-700 transition-all font-black uppercase tracking-widest"
+                                            >
+                                                {expandedLogs[index] ? 'Hide Data' : 'Inspect Object'}
+                                            </button>
+                                        )}
+                                    </div>
+                                    {log.details && expandedLogs[index] && (
+                                        <div className="mt-2.5 p-4 bg-black/40 rounded-xl border border-slate-800/80 overflow-x-auto flex flex-col shadow-inner backdrop-blur-sm">
+                                            {renderJsonWithLinks(log.details)}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     ))}
                     <div ref={logEndRef} />
@@ -58,14 +153,24 @@ const LogPanel = ({ logs }) => {
             </div>
 
             {/* Terminal Footer */}
-            <div className="bg-slate-800/50 px-4 py-2 border-t border-slate-700/50 flex justify-between items-center text-[10px] font-mono text-slate-500">
-                <div className="flex gap-4">
-                    <span>EVENTS: {logs.filter(l => l.type === 'event').length}</span>
-                    <span>BIDS: {logs.filter(l => l.type === 'bid').length}</span>
+            <div className="bg-slate-800/50 px-5 py-2.5 border-t border-slate-700/50 flex justify-between items-center text-[9px] font-black font-mono text-slate-500 tracking-widest uppercase">
+                <div className="flex gap-6">
+                    <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+                        <span>Events: {logs.filter(l => l.type === 'event').length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        <span>Bids: {logs.filter(l => l.type === 'bid').length}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
+                        <span>Privacy: {logs.filter(l => l.type === 'privacy').length}</span>
+                    </div>
                 </div>
-                <div className="flex items-center gap-1">
-                    <div className="w-1.5 h-1.5 rounded-full bg-bidlab-500 animate-pulse"></div>
-                    <span>READY</span>
+                <div className="flex items-center gap-2 text-bidlab-500/70">
+                    <div className="w-1.5 h-1.5 rounded-full bg-bidlab-500 shadow-[0_0_8px_rgba(14,165,233,0.5)]"></div>
+                    <span>System Encrypted</span>
                 </div>
             </div>
         </div>

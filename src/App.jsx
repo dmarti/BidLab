@@ -2,27 +2,76 @@ import React, { useState, useEffect, useCallback } from 'react';
 import './App.css';
 import AdSlot from './components/AdSlot';
 import LogPanel from './components/LogPanel';
+import PrivacyDashboard from './components/PrivacyDashboard';
 
 const PREBID_TIMEOUT = 2000;
+
+const JURISDICTIONS = {
+    'none': {
+        name: 'No Restrictions',
+        flag: '🌐',
+        gppString: null,
+        applicableSections: [],
+        description: 'Standard global behavior with no privacy signals.'
+    },
+    'eu_tcf': {
+        name: 'EU (TCF v2.2)',
+        flag: '🇪🇺',
+        gppString: 'DBABMA~CPabcdefghijklnopqrstuvwxyz.QA',
+        applicableSections: [2],
+        description: 'GDPR compliance mode using Transparency & Consent Framework.'
+    },
+    'us_nat': {
+        name: 'US National',
+        flag: '🇺🇸',
+        gppString: 'DBABLA~BVaaaaaa.QA',
+        applicableSections: [7],
+        description: 'IAB US National Privacy string for multi-state compliance.'
+    },
+    'us_ca': {
+        name: 'California (CCPA/CPRA)',
+        flag: '🐻',
+        gppString: 'DBABMA~BVaaaaaa.QA',
+        applicableSections: [8],
+        description: 'California-specific privacy signals (Do Not Sell/Share).'
+    },
+    'us_va': {
+        name: 'Virginia (VCDPA)',
+        flag: '🏛️',
+        gppString: 'DBABNA~BVaaaaaa.QA',
+        applicableSections: [9],
+        description: 'Virginia-specific privacy signals for consumer data protection.'
+    }
+};
 
 function App() {
     const [logs, setLogs] = useState([]);
     const [status, setStatus] = useState('Ready');
     const [winner, setWinner] = useState(null);
     const [isAuctionRunning, setIsAuctionRunning] = useState(false);
+    const [jurisdiction, setJurisdiction] = useState('none');
+    const [gpcActive, setGpcActive] = useState(false);
 
-    const addLog = useCallback((msg, type = 'event') => {
-        const ts = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-        setLogs(prevLogs => [...prevLogs, { ts, msg, type }]);
+    useEffect(() => {
+        // Detect Global Privacy Control (GPC)
+        const gpc = navigator.globalPrivacyControl === true || 
+                    navigator.globalPrivacyControl === '1' ||
+                    window.globalPrivacyControl === true;
+        setGpcActive(gpc);
+    }, []);
+
+    const addLog = useCallback((msg, type = 'event', details = null) => {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const ms = now.getMilliseconds().toString().padStart(3, '0');
+        const ts = `${timeStr}.${ms}`;
+        setLogs(prevLogs => [...prevLogs, { ts, msg, type, details }]);
     }, []);
 
     const trackEvent = useCallback((eventName, data) => {
         // Mock tracking function to track KPIs like 'demo_complete'
         console.log(`[Mock Tracker] Event: ${eventName}`, data);
-        addLog(`KPI Tracked: ${eventName}`, "event");
-        
-        // In a real app, this would send data to an analytics endpoint
-        // fetch('/api/track', { method: 'POST', body: JSON.stringify({ eventName, data }) });
+        addLog(`KPI Measurement Logged: ${eventName}`, "event", data);
     }, [addLog]);
 
     const requestConsulting = () => {
@@ -58,15 +107,35 @@ function App() {
         }];
 
         pbjs.que.push(() => {
+            // Remove existing ad units to avoid duplicates on re-run
+            if (pbjs.removeAdUnit) {
+                pbjs.removeAdUnit('ad-slot-1');
+            }
             pbjs.addAdUnits(adUnits);
+
+            const gppConfig = jurisdiction !== 'none' ? {
+                gpp: {
+                    cmpApi: 'static',
+                    consentData: {
+                        gppString: JURISDICTIONS[jurisdiction].gppString,
+                        applicableSections: JURISDICTIONS[jurisdiction].applicableSections
+                    }
+                }
+            } : {};
+
             pbjs.setConfig({
                 priceGranularity: 'medium',
-                debug: true
+                debug: true,
+                consentManagement: gppConfig
             });
-            addLog("BidLab Engine Initialized", "event");
+
+            addLog(`BidLab Engine Initialized (Mode: ${JURISDICTIONS[jurisdiction].name})`, "event");
+            if (jurisdiction !== 'none') {
+                addLog(`GPP System Configured: ${JURISDICTIONS[jurisdiction].gppString}`, "privacy");
+            }
             addLog("Adapters loaded: AppNexus, Rubicon, OpenX", "event");
         });
-    }, [addLog]);
+    }, [addLog, jurisdiction]);
 
     const handleBids = useCallback(() => {
         const pbjs = window.pbjs;
@@ -91,14 +160,15 @@ function App() {
             trackEvent('demo_complete', {
                 bidder: highestBid.bidder,
                 cpm: highestBid.cpm,
-                latency: highestBid.timeToRespond
+                latency: highestBid.timeToRespond,
+                jurisdiction: jurisdiction
             });
         } else {
             addLog("Auction failed: No bids returned", "error");
             setStatus("No Bids");
         }
         setIsAuctionRunning(false);
-    }, [addLog, trackEvent]);
+    }, [addLog, trackEvent, jurisdiction]);
 
     const injectMockBids = useCallback(() => {
         const pbjs = window.pbjs;
@@ -109,6 +179,22 @@ function App() {
             const latency = Math.floor(Math.random() * 600) + 200;
             
             setTimeout(() => {
+                const bidResponse = {
+                    bidder: bidder,
+                    cpm: parseFloat(cpm),
+                    latency: latency,
+                    gpc: gpcActive ? 'active' : 'inactive',
+                    gpp: jurisdiction !== 'none' ? {
+                        status: 'validated',
+                        string: JURISDICTIONS[jurisdiction].gppString,
+                        sid: JURISDICTIONS[jurisdiction].applicableSections
+                    } : 'none'
+                };
+
+                if (jurisdiction !== 'none' || gpcActive) {
+                    addLog(`[${bidder}] Privacy signals validated in adapter flow`, "privacy", bidResponse);
+                }
+
                 const bid = {
                     bidderCode: bidder,
                     width: 300,
@@ -116,7 +202,7 @@ function App() {
                     statusMessage: 'Bid available',
                     adId: Math.random().toString(36).substring(2, 15),
                     cpm: parseFloat(cpm),
-                    ad: `<html><body style="margin:0;padding:0;background:#0f172a;display:flex;align-items:center;justify-content:center;height:250px;border:2px solid #3b82f6;border-radius:8px;box-sizing:border-box;"><div style="text-align:center;color:white;font-family:sans-serif;"><div style="font-weight:bold;font-size:24px;margin-bottom:8px;">${bidder.toUpperCase()}</div><div style="color:#60a5fa;font-size:18px;">WINNING BID: ${cpm}</div><div style="font-size:12px;margin-top:12px;opacity:0.7;">Rendered via BidLab Mock Adapter</div></div></body></html>`,
+                    ad: `<html><body style="margin:0;padding:0;background:#0f172a;display:flex;align-items:center;justify-content:center;height:250px;border:2px solid #3b82f6;border-radius:8px;box-sizing:border-box;"><div style="text-align:center;color:white;font-family:sans-serif;"><div style="font-weight:bold;font-size:24px;margin-bottom:8px;">${bidder.toUpperCase()}</div><div style="color:#60a5fa;font-size:18px;">WINNING BID: ${cpm}</div><div style="font-size:12px;margin-top:12px;opacity:0.7;">Rendered via BidLab Mock Adapter</div><div style="font-size:10px;margin-top:4px;color:#94a3b8;">Jurisdiction: ${JURISDICTIONS[jurisdiction].name}</div></div></body></html>`,
                     currency: 'USD',
                     netRevenue: true,
                     ttl: 300,
@@ -132,10 +218,10 @@ function App() {
                     adUnitCode: 'ad-slot-1'
                 };
                 pbjs.addBidResponse('ad-slot-1', bid);
-                addLog(`Mock bid received: ${bidder} (${cpm})`, "bid");
+                addLog(`Mock bid received: ${bidder} ($${cpm})`, "bid");
             }, latency);
         });
-    }, [addLog]);
+    }, [addLog, jurisdiction, gpcActive]);
 
     const runAuction = () => {
         const pbjs = window.pbjs;
@@ -146,9 +232,24 @@ function App() {
         setIsAuctionRunning(true);
         setWinner(null);
         setStatus("Auctioning...");
-        addLog("Auction Started", "event");
+        addLog("Starting Prebid.js Distributed Auction", "event");
         
         pbjs.que.push(() => {
+            if (gpcActive) {
+                addLog("Global Privacy Control (GPC) enforcement active", "privacy");
+            }
+            // Log simulated OpenRTB privacy fields for the demonstration
+            const openRtbRequest = {
+                regs: {
+                    gpc: gpcActive ? '1' : '0',
+                    ...(jurisdiction !== 'none' ? {
+                        gpp: JURISDICTIONS[jurisdiction].gppString,
+                        gpp_sid: JURISDICTIONS[jurisdiction].applicableSections
+                    } : {})
+                }
+            };
+            addLog(`OpenRTB BidRequest serialized with privacy regs`, "privacy", openRtbRequest);
+
             pbjs.requestBids({
                 timeout: PREBID_TIMEOUT,
                 bidsBackHandler: () => {
@@ -168,25 +269,27 @@ function App() {
         <div className="min-h-screen bg-slate-900 text-slate-200 font-sans selection:bg-bidlab-500/30">
             {/* Background Decorative Elements */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-bidlab-900/20 rounded-full blur-[120px]"></div>
+                <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-bidlab-900/10 rounded-full blur-[120px]"></div>
                 <div className="absolute top-[60%] -right-[5%] w-[30%] h-[40%] bg-blue-900/10 rounded-full blur-[100px]"></div>
             </div>
 
             <div className="relative max-w-6xl mx-auto px-4 py-8 md:py-12">
-                <header className="mb-12 text-center md:text-left flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-800 pb-8">
+                <header className="mb-12 text-center md:text-left flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-800/80 pb-8 relative">
+                    <div className="absolute -bottom-px left-0 w-32 h-px bg-gradient-to-r from-bidlab-500 to-transparent"></div>
+                    
                     <div>
                         <div className="flex items-center gap-3 justify-center md:justify-start mb-2">
-                            <div className="w-10 h-10 bg-bidlab-600 rounded-lg flex items-center justify-center shadow-lg shadow-bidlab-600/20">
+                            <div className="w-10 h-10 bg-bidlab-600 rounded-lg flex items-center justify-center shadow-lg shadow-bidlab-600/30 ring-1 ring-white/10">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6 text-white">
                                     <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round" />
                                 </svg>
                             </div>
-                            <h1 className="text-4xl font-black tracking-tight text-white">
+                            <h1 className="text-4xl font-black tracking-tighter text-white">
                                 Bid<span className="text-bidlab-500">Lab</span>
                             </h1>
                         </div>
-                        <p className="text-slate-400 text-lg max-w-md">
-                            Header Bidding Real-Time Demonstration & Interactive Lab.
+                        <p className="text-slate-400 text-lg max-w-md font-medium">
+                            Real-time Header Bidding & Privacy Signal Playground.
                         </p>
                     </div>
 
@@ -194,10 +297,10 @@ function App() {
                         <button 
                             onClick={runAuction} 
                             disabled={isAuctionRunning}
-                            className={`px-6 py-3 rounded-xl font-bold transition-all duration-200 flex items-center gap-2 shadow-lg ${
+                            className={`px-6 py-3 rounded-xl font-black transition-all duration-200 flex items-center gap-2 shadow-lg tracking-tight ${
                                 isAuctionRunning 
-                                ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
-                                : 'bg-bidlab-600 hover:bg-bidlab-500 text-white hover:scale-[1.02] active:scale-[0.98] shadow-bidlab-600/20'
+                                ? 'bg-slate-800 text-slate-500 cursor-not-allowed border border-slate-700' 
+                                : 'bg-bidlab-600 hover:bg-bidlab-500 text-white hover:scale-[1.02] active:scale-[0.98] shadow-bidlab-600/20 ring-1 ring-white/20'
                             }`}
                         >
                             {isAuctionRunning && (
@@ -206,22 +309,34 @@ function App() {
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
                             )}
-                            {isAuctionRunning ? 'Auction in Progress...' : 'Trigger Auction'}
+                            {isAuctionRunning ? 'Auctioning...' : 'Trigger Auction'}
                         </button>
                         <button 
                             onClick={resetDemo}
-                            className="px-6 py-3 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700"
+                            className="px-6 py-3 rounded-xl font-black bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700/80 shadow-md tracking-tight"
                         >
                             Reset Lab
                         </button>
                         <button 
                             onClick={requestConsulting}
-                            className="px-6 py-3 rounded-xl font-bold bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 transition-all border border-blue-500/30"
+                            className="px-6 py-3 rounded-xl font-black bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-400 transition-all border border-indigo-500/30 shadow-md tracking-tight"
                         >
                             Request Consulting
                         </button>
                     </div>
                 </header>
+
+                <div className="mb-12">
+                    <PrivacyDashboard 
+                        activeJurisdiction={jurisdiction} 
+                        onJurisdictionChange={setJurisdiction}
+                        gpcActive={gpcActive}
+                        onGpcToggle={() => {
+                            setGpcActive(!gpcActive);
+                            addLog(`GPC simulation state changed to ${!gpcActive ? 'ACTIVE' : 'INACTIVE'}`, "privacy");
+                        }}
+                    />
+                </div>
 
                 <main className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Left Column: Log Panel */}
@@ -233,37 +348,40 @@ function App() {
                     <div className="lg:col-span-5 order-1 lg:order-2 space-y-6">
                         <AdSlot winner={winner} status={status} />
                         
-                        <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl backdrop-blur-sm">
-                            <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-                                <svg className="w-5 h-5 text-bidlab-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        <div className="bg-slate-800/50 border border-slate-700/50 p-7 rounded-2xl backdrop-blur-sm relative overflow-hidden group">
+                             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                                <svg className="w-12 h-12 text-bidlab-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a2 2 0 00-1.96 1.414l-.477 2.387a2 2 0 00.547 1.022l1.428 1.428a2 2 0 002.828 0l1.428-1.428a2 2 0 00.547-1.022l.477-2.387a2 2 0 00-1.414-1.96l-2.387-.477a2 2 0 00-1.022.547l-1.428 1.428a2 2 0 000 2.828l1.428 1.428z" />
                                 </svg>
+                            </div>
+                            <h3 className="text-white font-black text-xs uppercase tracking-[0.2em] mb-5 flex items-center gap-3">
+                                <span className="w-2 h-2 bg-bidlab-500 rounded-full shadow-[0_0_8px_rgba(14,165,233,0.6)]"></span>
                                 Lab Mechanics
                             </h3>
-                            <ul className="space-y-3 text-sm text-slate-400">
-                                <li className="flex gap-3">
-                                    <span className="flex-shrink-0 w-6 h-6 bg-slate-700 text-slate-300 rounded-full flex items-center justify-center text-xs font-bold">1</span>
-                                    <p><strong className="text-slate-200">Prebid.js</strong> initializes and registers ad units in the window queue.</p>
-                                </li>
-                                <li className="flex gap-3">
-                                    <span className="flex-shrink-0 w-6 h-6 bg-slate-700 text-slate-300 rounded-full flex items-center justify-center text-xs font-bold">2</span>
-                                    <p><strong className="text-slate-200">Concurrent Requests</strong> are sent to multiple mock demand sources simultaneously.</p>
-                                </li>
-                                <li className="flex gap-3">
-                                    <span className="flex-shrink-0 w-6 h-6 bg-slate-700 text-slate-300 rounded-full flex items-center justify-center text-xs font-bold">3</span>
-                                    <p><strong className="text-slate-200">Unified Auction</strong> happens in-browser, selecting the highest valid bid.</p>
-                                </li>
-                                <li className="flex gap-3">
-                                    <span className="flex-shrink-0 w-6 h-6 bg-slate-700 text-slate-300 rounded-full flex items-center justify-center text-xs font-bold">4</span>
-                                    <p><strong className="text-slate-200">Instant Rendering</strong> occurs as the winning creative is injected into the secure iframe.</p>
-                                </li>
+                            <ul className="space-y-4">
+                                {[
+                                    { t: "Prebid.js", d: "Initializes and registers multi-jurisdictional ad units in the window queue." },
+                                    { t: "GPP & GPC", d: "Privacy signals are aggregated and injected into the OpenRTB regs object." },
+                                    { t: "Distributed Auction", d: "Bids are collected and validated against privacy constraints in parallel." },
+                                    { t: "Winning Creative", d: "The highest valid bid is rendered within a secure, sandboxed iframe." }
+                                ].map((item, idx) => (
+                                    <li key={idx} className="flex gap-4 group/item">
+                                        <span className="flex-shrink-0 w-7 h-7 bg-slate-900/80 border border-slate-700 text-bidlab-400 rounded-lg flex items-center justify-center text-[10px] font-black shadow-inner group-hover/item:border-bidlab-500/50 transition-colors">
+                                            0{idx+1}
+                                        </span>
+                                        <p className="text-slate-400 text-xs leading-relaxed font-medium">
+                                            <strong className="text-slate-200 block mb-0.5 uppercase tracking-wide font-black text-[10px]">{item.t}</strong>
+                                            {item.d}
+                                        </p>
+                                    </li>
+                                ))}
                             </ul>
                         </div>
                     </div>
                 </main>
 
-                <footer className="mt-16 text-center text-slate-500 text-sm border-t border-slate-800 pt-8">
-                    <p>© 2026 BidLab • Interactive Prebid Documentation Environment</p>
+                <footer className="mt-20 text-center text-slate-500 text-[10px] font-black uppercase tracking-[0.3em] border-t border-slate-800/80 pt-10">
+                    <p>© 2026 BidLab • Interactive Documentation • v2.6.4</p>
                 </footer>
             </div>
         </div>

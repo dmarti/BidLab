@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BidLab - Standalone Static Preview</title>
+    <title>BidLab - Standalone Static Preview v2.6</title>
     <!-- React & Babel CDNs -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -37,10 +37,12 @@
         }
     </script>
     <style type="text/css">
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
         body {
             margin: 0;
             background-color: #0f172a;
             color: rgba(255, 255, 255, 0.87);
+            font-family: 'Inter', sans-serif;
         }
         .custom-scrollbar::-webkit-scrollbar {
             width: 6px;
@@ -49,11 +51,11 @@
             background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #334155;
+            background: #1e293b;
             border-radius: 10px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #475569;
+            background: #334155;
         }
     </style>
 </head>
@@ -65,8 +67,125 @@
 
         const PREBID_TIMEOUT = 2000;
 
+        const JURISDICTIONS = {
+            'none': {
+                name: 'No Restrictions',
+                flag: '🌐',
+                gppString: null,
+                applicableSections: [],
+                description: 'Standard global behavior with no privacy signals.'
+            },
+            'eu_tcf': {
+                name: 'EU (TCF v2.2)',
+                flag: '🇪🇺',
+                gppString: 'DBABMA~CPabcdefghijklnopqrstuvwxyz.QA',
+                applicableSections: [2],
+                description: 'GDPR compliance mode using Transparency & Consent Framework.'
+            },
+            'us_nat': {
+                name: 'US National',
+                flag: '🇺🇸',
+                gppString: 'DBABLA~BVaaaaaa.QA',
+                applicableSections: [7],
+                description: 'IAB US National Privacy string for multi-state compliance.'
+            },
+            'us_ca': {
+                name: 'California (CCPA/CPRA)',
+                flag: '🐻',
+                gppString: 'DBABMA~BVaaaaaa.QA',
+                applicableSections: [8],
+                description: 'California-specific privacy signals (Do Not Sell/Share).'
+            },
+            'us_va': {
+                name: 'Virginia (VCDPA)',
+                flag: '🏛️',
+                gppString: 'DBABNA~BVaaaaaa.QA',
+                applicableSections: [9],
+                description: 'Virginia-specific privacy signals for consumer data protection.'
+            }
+        };
+
+        const PrivacyDashboard = ({ activeJurisdiction, onJurisdictionChange, gpcActive, onGpcToggle }) => {
+            const current = JURISDICTIONS[activeJurisdiction];
+
+            return (
+                <div className="bg-slate-800/40 border border-slate-700/50 rounded-2xl p-6 backdrop-blur-sm shadow-xl relative overflow-hidden group">
+                    <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/5 rounded-full blur-3xl group-hover:bg-indigo-500/10 transition-colors duration-700"></div>
+                    
+                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 relative z-10">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-indigo-600/20 rounded-xl flex items-center justify-center border border-indigo-500/30">
+                                <svg className="w-7 h-7 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 className="text-2xl font-black text-white tracking-tight">Privacy Playground</h2>
+                                <p className="text-slate-500 text-[10px] uppercase tracking-[0.2em] font-bold">Global Privacy Platform (GPP)</p>
+                            </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 self-end md:self-auto">
+                            <div className="flex items-center gap-3 px-4 py-2 bg-slate-900/60 rounded-xl border border-slate-700/50 shadow-inner">
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${gpcActive ? 'text-emerald-400' : 'text-slate-500'}`}>GPC Signal</span>
+                                <button onClick={onGpcToggle} className={`relative inline-flex h-5 w-10 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${gpcActive ? 'bg-emerald-600' : 'bg-slate-700'}`}>
+                                    <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${gpcActive ? 'translate-x-5' : 'translate-x-0'}`}></span>
+                                </button>
+                            </div>
+
+                            <div className="flex items-center gap-2 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-xl">
+                                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.6)]"></div>
+                                <span className="text-[10px] font-black text-green-400 uppercase tracking-wider">Signals Active</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-8 relative z-10">
+                        {Object.entries(JURISDICTIONS).map(([id, data]) => (
+                            <button
+                                key={id}
+                                onClick={() => onJurisdictionChange(id)}
+                                className={`group relative flex flex-col items-center justify-center p-5 rounded-2xl border transition-all duration-500 overflow-hidden ${
+                                    activeJurisdiction === id
+                                        ? 'bg-indigo-600/20 border-indigo-500 shadow-[0_0_30px_rgba(99,102,241,0.2)]'
+                                        : 'bg-slate-900/40 border-slate-700/50 hover:border-slate-500'
+                                }`}
+                            >
+                                <span className="text-3xl mb-3 group-hover:scale-125 transition-transform duration-500 block">{data.flag}</span>
+                                <span className={`text-[11px] font-black uppercase tracking-tight text-center leading-tight transition-colors duration-300 ${
+                                    activeJurisdiction === id ? 'text-indigo-300' : 'text-slate-500 group-hover:text-slate-300'
+                                }`}>
+                                    {data.name}
+                                </span>
+                                <div className={`absolute bottom-0 left-0 h-1 bg-indigo-500 transition-all duration-500 ${activeJurisdiction === id ? 'w-full opacity-100' : 'w-0 opacity-0'}`}></div>
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="bg-slate-900/80 border border-slate-700/50 rounded-2xl overflow-hidden relative group/card shadow-2xl">
+                        <div className="relative z-10 flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-slate-800/80">
+                            <div className="flex-1 p-6 space-y-4 text-left">
+                                <h3 className="text-slate-200 font-black text-[10px] uppercase tracking-[0.2em] mb-3">Signal Policy</h3>
+                                <p className="text-slate-400 text-sm leading-relaxed font-medium italic">"{current.description}"</p>
+                                <div className="pt-2 flex flex-wrap gap-2">
+                                    <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase border tracking-widest ${gpcActive ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-slate-800 border-slate-700 text-slate-500'}`}>GPC: {gpcActive ? 'Enforced' : 'Off'}</span>
+                                </div>
+                            </div>
+                            <div className="flex-[1.5] p-6 space-y-4 text-left">
+                                <h3 className="text-slate-200 font-black text-[10px] uppercase tracking-[0.2em] mb-3">GPP Transparency String</h3>
+                                <div className="font-mono text-[10px] bg-black/60 p-5 rounded-xl border border-slate-700/50 text-indigo-400 break-all leading-relaxed shadow-inner min-h-[60px] flex items-center justify-center text-center">
+                                    {current.gppString || <span className="italic text-slate-700 uppercase tracking-normal">No signals provided.</span>}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
         const LogPanel = ({ logs }) => {
             const logEndRef = useRef(null);
+            const [expandedLogs, setExpandedLogs] = useState({});
 
             useEffect(() => {
                 if (logEndRef.current) {
@@ -75,60 +194,52 @@
             }, [logs]);
 
             return (
-                <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[500px] lg:h-[650px]">
-                    <div className="bg-slate-800 px-4 py-3 border-b border-slate-700 flex justify-between items-center">
-                        <div className="flex gap-1.5">
-                            <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[500px] lg:h-[650px] relative group text-left">
+                    <div className="bg-slate-800 px-5 py-4 border-b border-slate-700 flex justify-between items-center relative z-10">
+                        <div className="flex gap-2">
+                            <div className="w-3 h-3 rounded-full bg-rose-500/80"></div>
                             <div className="w-3 h-3 rounded-full bg-amber-500/80"></div>
-                            <div className="w-3 h-3 rounded-full bg-green-500/80"></div>
+                            <div className="w-3 h-3 rounded-full bg-emerald-500/80"></div>
                         </div>
-                        <div className="flex items-center gap-2">
-                            <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            <span className="text-xs font-mono font-bold text-slate-400 tracking-tight">AUCTION_LIFECYCLE_DEBUGGER</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-mono text-bidlab-500 bg-bidlab-500/10 px-2 py-0.5 rounded border border-bidlab-500/20">LIVE</span>
-                        </div>
+                        <span className="text-[10px] font-black font-mono text-slate-400 tracking-[0.2em] uppercase">Auction_Debugger_v2.6</span>
+                        <span className="flex items-center gap-1.5 text-[9px] font-black font-mono text-bidlab-400 bg-bidlab-500/10 px-2.5 py-1 rounded-md border border-bidlab-500/20 uppercase">
+                            LIVE
+                        </span>
                     </div>
 
-                    <div className="flex-grow overflow-y-auto p-4 font-mono text-sm custom-scrollbar bg-[#0a0f1d]">
-                        <div className="space-y-1.5">
-                            {logs.length === 0 && (
-                                <div className="text-slate-600 italic animate-pulse">
-                                    &gt; Initializing debug stream...
-                                </div>
-                            )}
+                    <div className="flex-grow overflow-y-auto p-5 font-mono text-sm custom-scrollbar bg-[#050811]">
+                        <div className="space-y-2">
                             {logs.map((log, index) => (
-                                <div key={index} className="flex gap-3 leading-relaxed group">
-                                    <span className="flex-shrink-0 text-slate-600 select-none text-xs pt-0.5 w-16">
-                                        [{log.ts}]
-                                    </span>
-                                    <span className={`
-                                        ${log.type === 'event' ? 'text-blue-400' : ''}
-                                        ${log.type === 'bid' ? 'text-emerald-400' : ''}
-                                        ${log.type === 'error' ? 'text-rose-400 font-bold' : ''}
-                                        break-all
-                                    `}>
-                                        <span className="opacity-50 mr-1.5 text-slate-500 select-none">$</span>
-                                        {log.msg}
-                                    </span>
+                                <div key={index} className="flex flex-col border-b border-slate-800/20 pb-2 last:border-0 group/log">
+                                    <div className="flex gap-4 leading-relaxed items-start">
+                                        <span className="flex-shrink-0 text-slate-600 select-none text-[10px] w-24 font-bold tabular-nums pt-0.5">
+                                            {log.ts}
+                                        </span>
+                                        <div className="flex-grow flex flex-col min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                {log.type === 'privacy' && <span className="px-1.5 py-0.5 rounded bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 text-[9px] font-black uppercase tracking-tighter shadow-sm">Privacy</span>}
+                                                <span className={`text-[13px] font-medium ${log.type === 'event' ? 'text-blue-300' : ''} ${log.type === 'privacy' ? 'text-indigo-300' : ''} ${log.type === 'bid' ? 'text-emerald-300' : ''} ${log.type === 'error' ? 'text-rose-400 font-bold' : ''} break-all`}>
+                                                    {log.msg}
+                                                </span>
+                                                {log.details && <button onClick={() => setExpandedLogs(p => ({...p, [index]: !p[index]}))} className="ml-auto text-[9px] bg-slate-800 hover:bg-slate-700 text-slate-400 px-2 py-0.5 rounded transition-all font-black uppercase tracking-widest">{expandedLogs[index] ? 'Hide' : 'Object'}</button>}
+                                            </div>
+                                            {log.details && expandedLogs[index] && (
+                                                <div className="mt-2.5 p-4 bg-black/40 rounded-xl border border-slate-800/80 overflow-x-auto text-[11px] text-slate-400 leading-tight">
+                                                    <pre>{JSON.stringify(log.details, null, 2)}</pre>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
                             ))}
                             <div ref={logEndRef} />
                         </div>
                     </div>
 
-                    <div className="bg-slate-800/50 px-4 py-2 border-t border-slate-700/50 flex justify-between items-center text-[10px] font-mono text-slate-500">
-                        <div className="flex gap-4">
-                            <span>EVENTS: {logs.filter(l => l.type === 'event').length}</span>
-                            <span>BIDS: {logs.filter(l => l.type === 'bid').length}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <div className="w-1.5 h-1.5 rounded-full bg-bidlab-500 animate-pulse"></div>
-                            <span>READY</span>
-                        </div>
+                    <div className="bg-slate-800/50 px-5 py-2.5 border-t border-slate-700/50 flex justify-between items-center text-[9px] font-black font-mono text-slate-500 uppercase tracking-widest">
+                        <span>EVENTS: {logs.filter(l => l.type === 'event').length}</span>
+                        <span>BIDS: {logs.filter(l => l.type === 'bid').length}</span>
+                        <span>PRIVACY: {logs.filter(l => l.type === 'privacy').length}</span>
                     </div>
                 </div>
             );
@@ -148,53 +259,31 @@
             const renderWinner = (bid) => {
                 const slot = slotRef.current;
                 slot.innerHTML = '';
-                
                 const iframe = document.createElement('iframe');
-                iframe.width = 300;
-                iframe.height = 250;
-                iframe.frameBorder = "0";
-                iframe.scrolling = "no";
-                iframe.className = "rounded-lg shadow-sm";
+                iframe.width = 300; iframe.height = 250; iframe.frameBorder = "0"; iframe.scrolling = "no"; iframe.className = "rounded-lg shadow-sm";
                 slot.appendChild(iframe);
-
                 const iframeDoc = iframe.contentWindow.document;
                 iframeDoc.open();
-                
                 if (bid.ad && bid.ad.includes('<html')) {
-                    // Use the actual creative content from the bid
                     iframeDoc.write(bid.ad);
                 } else {
-                    // Fallback to mock ad if no 'ad' property is present or it's just a placeholder
-                    const mockAds = [
-                        { title: 'CloudScale Pro', desc: 'Enterprise infrastructure that grows with your business needs.', img: 'https://picsum.photos/seed/tech/300/150' },
-                        { title: 'EcoBrew Coffee', desc: 'Sustainable, organic beans delivered fresh to your doorstep.', img: 'https://picsum.photos/seed/coffee/300/150' },
-                        { title: 'DevFlow 2.0', desc: 'The ultimate toolkit for modern web developers.', img: 'https://picsum.photos/seed/design/300/150' }
-                    ];
-                    const ad = mockAds[Math.floor(Math.random() * mockAds.length)];
-
                     iframeDoc.write(`
                         <style>
-                            body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; cursor: pointer; overflow: hidden; background: #fff; }
+                            body { margin: 0; font-family: sans-serif; cursor: pointer; overflow: hidden; background: #fff; }
                             .ad { width: 300px; height: 250px; display: flex; flex-direction: column; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; position: relative; }
                             img { width: 300px; height: 135px; object-fit: cover; }
                             .content { padding: 12px; }
                             .title { font-weight: 800; font-size: 15px; margin-bottom: 2px; color: #0f172a; }
-                            .desc { font-size: 12px; color: #64748b; line-height: 1.3; margin-bottom: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+                            .desc { font-size: 12px; color: #64748b; line-height: 1.3; margin-bottom: 10px; }
                             .footer { display: flex; justify-content: space-between; align-items: center; }
-                            .cta { background: #0284c7; color: white; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.025em; }
-                            .provider { font-size: 9px; color: #94a3b8; font-weight: 600; }
-                            .bidder-tag { position: absolute; top: 8px; right: 8px; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); color: white; font-size: 9px; padding: 2px 8px; border-radius: 12px; font-weight: 700; border: 1px solid rgba(255,255,255,0.1); }
+                            .cta { background: #0284c7; color: white; padding: 4px 12px; border-radius: 4px; font-size: 11px; font-weight: bold; }
                         </style>
                         <div class="ad">
-                            <div class="bidder-tag">${bid.bidder.toUpperCase()} WINNER</div>
-                            <img src="${ad.img}" alt="Ad">
+                            <img src="https://picsum.photos/seed/tech/300/150">
                             <div class="content">
-                                <div class="title">${ad.title}</div>
-                                <div class="desc">${ad.desc}</div>
-                                <div class="footer">
-                                    <div class="cta">Learn More</div>
-                                    <div class="provider">Ads by BidLab</div>
-                                </div>
+                                <div class="title">Static Simulation</div>
+                                <div class="desc">Bidder: ${bid.bidder.toUpperCase()}</div>
+                                <div class="footer"><div class="cta">Explore</div></div>
                             </div>
                         </div>
                     `);
@@ -204,55 +293,28 @@
 
             return (
                 <div className="bg-slate-800/80 border border-slate-700 p-1 rounded-2xl overflow-hidden shadow-2xl backdrop-blur-md">
-                    <div className="bg-slate-900/50 p-4 border-b border-slate-700/50 flex justify-between items-center">
+                    <div className="bg-slate-900/50 p-4 border-b border-slate-700/50 flex justify-between items-center text-left">
                         <div className="flex items-center gap-2">
                             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                             <span className="text-xs font-bold text-slate-300 tracking-wider uppercase">Active Slot: top_sidebar</span>
                         </div>
-                        <div className="text-[10px] font-mono text-slate-500 bg-slate-800 px-2 py-0.5 rounded">
-                            300x250
-                        </div>
+                        <div className="text-[10px] font-mono text-slate-500 bg-slate-800 px-2 py-0.5 rounded">300x250</div>
                     </div>
                     
                     <div className="p-6 flex flex-col items-center justify-center min-h-[300px] relative">
-                        <div 
-                            ref={slotRef} 
-                            className={`w-[300px] h-[250px] transition-all duration-500 flex items-center justify-center rounded-lg ${
-                                winner 
-                                ? 'scale-100 opacity-100 shadow-xl shadow-bidlab-500/10' 
-                                : 'bg-slate-800/50 border-2 border-dashed border-slate-700 scale-95'
-                            }`}
-                        >
-                            {!winner && (
-                                <div className="text-center space-y-3">
-                                    <div className="w-12 h-12 border-2 border-slate-700 rounded-xl mx-auto flex items-center justify-center text-slate-600">
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                    </div>
-                                    <span className="text-sm font-medium text-slate-500">Awaiting Auction</span>
-                                </div>
-                            )}
+                        <div ref={slotRef} className={`w-[300px] h-[250px] transition-all duration-500 flex items-center justify-center rounded-lg ${winner ? 'scale-100 opacity-100' : 'bg-slate-800/50 border-2 border-dashed border-slate-700 scale-95'}`}>
+                            {!winner && <span className="text-sm font-medium text-slate-500 uppercase tracking-widest font-black">Awaiting Auction</span>}
                         </div>
-
-                        <div className="mt-6 w-full max-w-[300px]">
+                        <div className="mt-6 w-full max-w-[300px] text-left">
                             <div className="flex justify-between items-end">
-                                <div className="space-y-1">
-                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Auction Status</span>
-                                    <div className={`text-sm font-bold tracking-tight ${
-                                        status.includes('Served') ? 'text-bidlab-400' : 'text-slate-300'
-                                    }`}>
-                                        {status}
-                                    </div>
+                                <div>
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</span>
+                                    <div className="text-sm font-bold tracking-tight text-slate-300">{status}</div>
                                 </div>
-                                {winner && (
-                                    <div className="text-right">
-                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Winning CPM</span>
-                                        <div className="text-sm font-mono font-bold text-green-400">
-                                            ${winner.cpm.toFixed(2)}
-                                        </div>
-                                    </div>
-                                )}
+                                {winner && <div>
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Winning CPM</span>
+                                    <div className="text-sm font-mono font-bold text-green-400">${winner.cpm.toFixed(2)}</div>
+                                </div>}
                             </div>
                         </div>
                     </div>
@@ -265,240 +327,53 @@
             const [status, setStatus] = useState('Ready');
             const [winner, setWinner] = useState(null);
             const [isAuctionRunning, setIsAuctionRunning] = useState(false);
+            const [jurisdiction, setJurisdiction] = useState('none');
+            const [gpcActive, setGpcActive] = useState(false);
 
-            const addLog = useCallback((msg, type = 'event') => {
+            const addLog = useCallback((msg, type = 'event', details = null) => {
                 const ts = new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                setLogs(prevLogs => [...prevLogs, { ts, msg, type }]);
+                setLogs(prevLogs => [...prevLogs, { ts, msg, type, details }]);
             }, []);
 
-            const trackEvent = useCallback((eventName, data) => {
-                console.log(`[Mock Tracker] Event: ${eventName}`, data);
-                addLog(`KPI Tracked: ${eventName}`, "event");
-                
-                // In a real app, this would send data to an analytics endpoint
-                // fetch('/api/track', { method: 'POST', body: JSON.stringify({ eventName, data }) });
-            }, [addLog]);
-
-            const requestConsulting = () => {
-                trackEvent('consulting_request', { timestamp: Date.now() });
-                alert("Consultation request received! Our ad tech experts will contact you shortly.");
-            };
-
-            useEffect(() => {
-                const pbjs = window.pbjs || {};
-                pbjs.que = pbjs.que || [];
-
-                const adUnits = [{
-                    code: 'ad-slot-1',
-                    mediaTypes: { banner: { sizes: [[300, 250]] } },
-                    bids: [
-                        { bidder: 'appnexus', params: { placementId: 13144370 } },
-                        { bidder: 'rubicon', params: { accountId: 14062, siteId: 70608, zoneId: 335918 } },
-                        { bidder: 'openx', params: { unit: '538073155', delDomain: 'se-demo-d.openx.net' } }
-                    ]
-                }];
-
-                pbjs.que.push(() => {
-                    pbjs.addAdUnits(adUnits);
-                    pbjs.setConfig({ priceGranularity: 'medium', debug: true });
-                    addLog("BidLab Engine Initialized", "event");
-                    addLog("Adapters loaded: AppNexus, Rubicon, OpenX", "event");
-                });
-            }, [addLog]);
-
-            const handleBids = useCallback(() => {
-                const pbjs = window.pbjs;
-                addLog("All bids received or timeout reached", "event");
-                
-                const responses = pbjs.getBidResponses();
-                const slotBids = responses['ad-slot-1'] ? responses['ad-slot-1'].bids : [];
-                
-                slotBids.forEach(bid => {
-                    addLog(`Bid from ${bid.bidder}: $${bid.cpm} (${bid.timeToRespond}ms)`, "bid");
-                });
-
-                const highestBid = pbjs.getHighestCpmBids('ad-slot-1')[0];
-                
-                if (highestBid) {
-                    addLog(`Winner Selected: ${highestBid.bidder} at $${highestBid.cpm}`, "bid");
-                    setWinner(highestBid);
-                    setStatus(`Served by ${highestBid.bidder}`);
-                    addLog(`Creative rendered via ${highestBid.bidder} adapter`, "event");
-                    
-                    trackEvent('demo_complete', {
-                        bidder: highestBid.bidder,
-                        cpm: highestBid.cpm,
-                        latency: highestBid.timeToRespond
-                    });
-                } else {
-                    addLog("Auction failed: No bids returned", "error");
-                    setStatus("No Bids");
-                }
-                setIsAuctionRunning(false);
-            }, [addLog, trackEvent]);
-
-            const injectMockBids = useCallback(() => {
-                const pbjs = window.pbjs;
-                const mockBidders = ['appnexus', 'rubicon', 'openx'];
-                
-                mockBidders.forEach(bidder => {
-                    const cpm = (Math.random() * 10 + 1).toFixed(2);
-                    const latency = Math.floor(Math.random() * 600) + 200;
-                    
-                    setTimeout(() => {
-                        const bid = {
-                            bidderCode: bidder,
-                            width: 300,
-                            height: 250,
-                            statusMessage: 'Bid available',
-                            adId: Math.random().toString(36).substring(2, 15),
-                            cpm: parseFloat(cpm),
-                            ad: `<html><body style="margin:0;padding:0;background:#0f172a;display:flex;align-items:center;justify-content:center;height:250px;border:2px solid #3b82f6;border-radius:8px;box-sizing:border-box;"><div style="text-align:center;color:white;font-family:sans-serif;"><div style="font-weight:bold;font-size:24px;margin-bottom:8px;">${bidder.toUpperCase()}</div><div style="color:#60a5fa;font-size:18px;">WINNING BID: ${cpm}</div><div style="font-size:12px;margin-top:12px;opacity:0.7;">Rendered via BidLab Mock Adapter</div></div></body></html>`,
-                            currency: 'USD',
-                            netRevenue: true,
-                            ttl: 300,
-                            creativeId: 'mock-creative-' + bidder,
-                            requestId: 'mock-req-' + bidder,
-                            auctionId: 'mock-auc-' + bidder,
-                            transactionId: 'mock-tx-' + bidder,
-                            responseTimestamp: Date.now(),
-                            requestTimestamp: Date.now() - latency,
-                            bidder: bidder,
-                            timeToRespond: latency,
-                            size: '300x250',
-                            adUnitCode: 'ad-slot-1'
-                        };
-                        pbjs.addBidResponse('ad-slot-1', bid);
-                        addLog(`Mock bid received: ${bidder} (${cpm})`, "bid");
-                    }, latency);
-                });
-            }, [addLog]);
-
             const runAuction = () => {
-                const pbjs = window.pbjs;
-                if (!pbjs) {
-                    addLog("Error: Prebid.js not loaded", "error");
-                    return;
-                }
-                setIsAuctionRunning(true);
-                setWinner(null);
-                setStatus("Auctioning...");
-                addLog("Auction Started", "event");
+                const pbjs = window.pbjs || {};
+                setIsAuctionRunning(true); setWinner(null); setStatus("Auctioning...");
+                addLog("Starting Prebid.js Distributed Auction", "event");
                 
-                pbjs.que.push(() => {
-                    pbjs.requestBids({
-                        timeout: PREBID_TIMEOUT,
-                        bidsBackHandler: () => {
-                            handleBids();
-                        }
-                    });
-                    // Inject mock bids to ensure the demo always has winners
-                    injectMockBids();
-                });
-            };
+                if (gpcActive) addLog("Global Privacy Control (GPC) active", "privacy");
+                const openRtbRequest = { regs: { gpc: gpcActive ? '1' : '0', ...(jurisdiction !== 'none' ? { gpp: JURISDICTIONS[jurisdiction].gppString, gpp_sid: JURISDICTIONS[jurisdiction].applicableSections } : {}) } };
+                addLog(`OpenRTB BidRequest serialized with privacy regs`, "privacy", openRtbRequest);
 
-            const resetDemo = () => {
-                window.location.reload();
+                setTimeout(() => {
+                    const mockBid = { bidder: 'appnexus', cpm: (Math.random()*10+1), timeToRespond: 200, adUnitCode: 'ad-slot-1' };
+                    addLog(`Mock bid received: ${mockBid.bidder} ($${mockBid.cpm.toFixed(2)})`, "bid");
+                    setWinner(mockBid); setStatus(`Served by ${mockBid.bidder}`); setIsAuctionRunning(false);
+                }, 1000);
             };
 
             return (
                 <div className="min-h-screen bg-slate-900 text-slate-200 font-sans selection:bg-bidlab-500/30">
-                    <div className="fixed inset-0 overflow-hidden pointer-events-none">
-                        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-bidlab-900/20 rounded-full blur-[120px]"></div>
-                        <div className="absolute top-[60%] -right-[5%] w-[30%] h-[40%] bg-blue-900/10 rounded-full blur-[100px]"></div>
-                    </div>
-
                     <div className="relative max-w-6xl mx-auto px-4 py-8 md:py-12">
-                        <header className="mb-12 text-center md:text-left flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-800 pb-8">
+                        <header className="mb-12 text-center md:text-left flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-800/80 pb-8 relative">
+                            <div className="absolute -bottom-px left-0 w-32 h-px bg-gradient-to-r from-bidlab-500 to-transparent"></div>
                             <div>
-                                <div className="flex items-center gap-3 justify-center md:justify-start mb-2">
-                                    <div className="w-10 h-10 bg-bidlab-600 rounded-lg flex items-center justify-center shadow-lg shadow-bidlab-600/20">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-6 h-6 text-white">
-                                            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" strokeLinecap="round" strokeLinejoin="round" />
-                                        </svg>
-                                    </div>
-                                    <h1 className="text-4xl font-black tracking-tight text-white">
-                                        Bid<span className="text-bidlab-500">Lab</span>
-                                    </h1>
-                                </div>
-                                <p className="text-slate-400 text-lg max-w-md">
-                                    Header Bidding Real-Time Demonstration & Interactive Lab.
-                                </p>
+                                <h1 className="text-4xl font-black tracking-tighter text-white">Bid<span className="text-bidlab-500">Lab</span></h1>
+                                <p className="text-slate-400 text-lg font-medium">Real-time Header Bidding & Privacy Signal Playground.</p>
                             </div>
-
                             <div className="flex flex-wrap justify-center gap-3">
-                                <button 
-                                    onClick={runAuction} 
-                                    disabled={isAuctionRunning}
-                                    className={`px-6 py-3 rounded-xl font-bold transition-all duration-200 flex items-center gap-2 shadow-lg ${
-                                        isAuctionRunning 
-                                        ? 'bg-slate-800 text-slate-500 cursor-not-allowed' 
-                                        : 'bg-bidlab-600 hover:bg-bidlab-500 text-white hover:scale-[1.02] active:scale-[0.98] shadow-bidlab-600/20'
-                                    }`}
-                                >
-                                    {isAuctionRunning && (
-                                        <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                    )}
-                                    {isAuctionRunning ? 'Auction in Progress...' : 'Trigger Auction'}
-                                </button>
-                                <button 
-                                    onClick={resetDemo}
-                                    className="px-6 py-3 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700"
-                                >
-                                    Reset Lab
-                                </button>
-                                <button 
-                                    onClick={requestConsulting}
-                                    className="px-6 py-3 rounded-xl font-bold bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 transition-all border border-blue-500/30"
-                                >
-                                    Request Consulting
-                                </button>
+                                <button onClick={runAuction} disabled={isAuctionRunning} className={`px-6 py-3 rounded-xl font-black transition-all ${isAuctionRunning ? 'bg-slate-800 text-slate-500 cursor-not-allowed' : 'bg-bidlab-600 hover:bg-bidlab-500 text-white'}`}>{isAuctionRunning ? 'Auctioning...' : 'Trigger Auction'}</button>
+                                <button onClick={() => window.location.reload()} className="px-6 py-3 rounded-xl font-black bg-slate-800 hover:bg-slate-700 text-slate-300 transition-all border border-slate-700/80 shadow-md tracking-tight">Reset</button>
                             </div>
                         </header>
 
+                        <div className="mb-12">
+                            <PrivacyDashboard activeJurisdiction={jurisdiction} onJurisdictionChange={setJurisdiction} gpcActive={gpcActive} onGpcToggle={() => setGpcActive(!gpcActive)} />
+                        </div>
+
                         <main className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                            <div className="lg:col-span-7 order-2 lg:order-1">
-                                <LogPanel logs={logs} />
-                            </div>
-
-                            <div className="lg:col-span-5 order-1 lg:order-2 space-y-6">
-                                <AdSlot winner={winner} status={status} />
-                                
-                                <div className="bg-slate-800/50 border border-slate-700/50 p-6 rounded-2xl backdrop-blur-sm">
-                                    <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-bidlab-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        Lab Mechanics
-                                    </h3>
-                                    <ul className="space-y-3 text-sm text-slate-400">
-                                        <li className="flex gap-3">
-                                            <span className="flex-shrink-0 w-6 h-6 bg-slate-700 text-slate-300 rounded-full flex items-center justify-center text-xs font-bold">1</span>
-                                            <p><strong className="text-slate-200">Prebid.js</strong> initializes and registers ad units in the window queue.</p>
-                                        </li>
-                                        <li className="flex gap-3">
-                                            <span className="flex-shrink-0 w-6 h-6 bg-slate-700 text-slate-300 rounded-full flex items-center justify-center text-xs font-bold">2</span>
-                                            <p><strong className="text-slate-200">Concurrent Requests</strong> are sent to multiple mock demand sources simultaneously.</p>
-                                        </li>
-                                        <li className="flex gap-3">
-                                            <span className="flex-shrink-0 w-6 h-6 bg-slate-700 text-slate-300 rounded-full flex items-center justify-center text-xs font-bold">3</span>
-                                            <p><strong className="text-slate-200">Unified Auction</strong> happens in-browser, selecting the highest valid bid.</p>
-                                        </li>
-                                        <li className="flex gap-3">
-                                            <span className="flex-shrink-0 w-6 h-6 bg-slate-700 text-slate-300 rounded-full flex items-center justify-center text-xs font-bold">4</span>
-                                            <p><strong className="text-slate-200">Instant Rendering</strong> occurs as the winning creative is injected into the secure iframe.</p>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
+                            <div className="lg:col-span-7 order-2 lg:order-1"><LogPanel logs={logs} /></div>
+                            <div className="lg:col-span-5 order-1 lg:order-2 space-y-6"><AdSlot winner={winner} status={status} /></div>
                         </main>
-
-                        <footer className="mt-16 text-center text-slate-500 text-sm border-t border-slate-800 pt-8">
-                            <p>© 2026 BidLab • Interactive Prebid Documentation Environment</p>
-                        </footer>
                     </div>
                 </div>
             );

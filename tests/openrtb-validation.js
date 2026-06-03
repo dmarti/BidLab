@@ -20,6 +20,16 @@ const validateBidRequest = (bidRequest) => {
     if (!bidRequest.site && !bidRequest.app) errors.push("Missing 'site' or 'app' object");
     if (!bidRequest.device) errors.push("Missing 'device' object");
     if (!bidRequest.user) errors.push("Missing 'user' object");
+    
+    if (bidRequest.regs) {
+        if (bidRequest.regs.gpc !== undefined && !['0', '1'].includes(bidRequest.regs.gpc)) {
+            errors.push("regs.gpc must be '0' or '1'");
+        }
+        if (bidRequest.regs.gpp && typeof bidRequest.regs.gpp !== 'string') {
+            errors.push("regs.gpp must be a string");
+        }
+    }
+
     return { valid: errors.length === 0, errors };
 };
 
@@ -66,7 +76,12 @@ const testBidRequest = {
     }],
     site: { id: "bidlab-demo", domain: "bidlab.ai", page: "https://bidlab.ai/" },
     device: { ua: "NodeTest", language: "en" },
-    user: { id: "user-mock-123" }
+    user: { id: "user-mock-123" },
+    regs: {
+        gpc: '1',
+        gpp: 'DBAAABA~BvYAAAAAAAA.QA',
+        gpp_sid: [2]
+    }
 };
 
 const testBidResponse = {
