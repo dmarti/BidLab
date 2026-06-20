@@ -4,45 +4,10 @@ import AdSlot from './components/AdSlot';
 import LogPanel from './components/LogPanel';
 import PrivacyDashboard from './components/PrivacyDashboard';
 
+import { JURISDICTIONS } from "./constants/jurisdictions";
+
 const PREBID_TIMEOUT = 2000;
 
-const JURISDICTIONS = {
-    'none': {
-        name: 'No Restrictions',
-        flag: '🌐',
-        gppString: null,
-        applicableSections: [],
-        description: 'Standard global behavior with no privacy signals.'
-    },
-    'eu_tcf': {
-        name: 'EU (TCF v2.2)',
-        flag: '🇪🇺',
-        gppString: 'DBABMA~CPabcdefghijklnopqrstuvwxyz.QA',
-        applicableSections: [2],
-        description: 'GDPR compliance mode using Transparency & Consent Framework.'
-    },
-    'us_nat': {
-        name: 'US National',
-        flag: '🇺🇸',
-        gppString: 'DBABLA~BVaaaaaa.QA',
-        applicableSections: [7],
-        description: 'IAB US National Privacy string for multi-state compliance.'
-    },
-    'us_ca': {
-        name: 'California (CCPA/CPRA)',
-        flag: '🐻',
-        gppString: 'DBABMA~BVaaaaaa.QA',
-        applicableSections: [8],
-        description: 'California-specific privacy signals (Do Not Sell/Share).'
-    },
-    'us_va': {
-        name: 'Virginia (VCDPA)',
-        flag: '🏛️',
-        gppString: 'DBABNA~BVaaaaaa.QA',
-        applicableSections: [9],
-        description: 'Virginia-specific privacy signals for consumer data protection.'
-    }
-};
 
 function App() {
     const [logs, setLogs] = useState([]);
@@ -113,11 +78,15 @@ function App() {
             }
             pbjs.addAdUnits(adUnits);
 
+            const gppString = gpcActive && JURISDICTIONS[jurisdiction].gppStringGpc 
+                ? JURISDICTIONS[jurisdiction].gppStringGpc 
+                : JURISDICTIONS[jurisdiction].gppString;
+
             const gppConfig = jurisdiction !== 'none' ? {
                 gpp: {
                     cmpApi: 'static',
                     consentData: {
-                        gppString: JURISDICTIONS[jurisdiction].gppString,
+                        gppString: gppString,
                         applicableSections: JURISDICTIONS[jurisdiction].applicableSections
                     }
                 }
@@ -131,11 +100,11 @@ function App() {
 
             addLog(`BidLab Engine Initialized (Mode: ${JURISDICTIONS[jurisdiction].name})`, "event");
             if (jurisdiction !== 'none') {
-                addLog(`GPP System Configured: ${JURISDICTIONS[jurisdiction].gppString}`, "privacy");
+                addLog(`GPP System Configured: ${gppString}`, "privacy");
             }
             addLog("Adapters loaded: AppNexus, Rubicon, OpenX", "event");
         });
-    }, [addLog, jurisdiction]);
+    }, [addLog, jurisdiction, gpcActive]);
 
     const handleBids = useCallback(() => {
         const pbjs = window.pbjs;
@@ -179,6 +148,10 @@ function App() {
             const latency = Math.floor(Math.random() * 600) + 200;
             
             setTimeout(() => {
+                const gppString = gpcActive && JURISDICTIONS[jurisdiction].gppStringGpc 
+                    ? JURISDICTIONS[jurisdiction].gppStringGpc 
+                    : JURISDICTIONS[jurisdiction].gppString;
+
                 const bidResponse = {
                     bidder: bidder,
                     cpm: parseFloat(cpm),
@@ -186,7 +159,7 @@ function App() {
                     gpc: gpcActive ? 'active' : 'inactive',
                     gpp: jurisdiction !== 'none' ? {
                         status: 'validated',
-                        string: JURISDICTIONS[jurisdiction].gppString,
+                        string: gppString,
                         sid: JURISDICTIONS[jurisdiction].applicableSections
                     } : 'none'
                 };
@@ -238,12 +211,16 @@ function App() {
             if (gpcActive) {
                 addLog("Global Privacy Control (GPC) enforcement active", "privacy");
             }
+            const gppString = gpcActive && JURISDICTIONS[jurisdiction].gppStringGpc 
+                ? JURISDICTIONS[jurisdiction].gppStringGpc 
+                : JURISDICTIONS[jurisdiction].gppString;
+
             // Log simulated OpenRTB privacy fields for the demonstration
             const openRtbRequest = {
                 regs: {
                     gpc: gpcActive ? '1' : '0',
                     ...(jurisdiction !== 'none' ? {
-                        gpp: JURISDICTIONS[jurisdiction].gppString,
+                        gpp: gppString,
                         gpp_sid: JURISDICTIONS[jurisdiction].applicableSections
                     } : {})
                 }

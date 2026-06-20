@@ -78,28 +78,31 @@
             'eu_tcf': {
                 name: 'EU (TCF v2.2)',
                 flag: '🇪🇺',
-                gppString: 'DBAAABA~CP1A6aAP1A6aAAMAAAENACCAAAAAAAAAAAAA',
+                gppString: 'DBABMA~CQmDUEAQmDUEAAAAAAENAAFgAIAAAAAAAAAAAAAAAAAA.IAAA.YAAAAAAAAAAA',
                 applicableSections: [2],
                 description: 'GDPR compliance mode using Transparency & Consent Framework.'
             },
             'us_nat': {
                 name: 'US National',
                 flag: '🇺🇸',
-                gppString: 'DBABLA~BVqqmSIA',
+                gppString: 'DBABLA~BAAAAAAAAABA.QA',
+                gppStringGpc: 'DBABLA~BAAVAAAAAABA.YA',
                 applicableSections: [7],
                 description: 'IAB US National Privacy string for multi-state compliance.'
             },
             'us_ca': {
                 name: 'California (CCPA/CPRA)',
                 flag: '🐻',
-                gppString: 'DBABMA~BVqqmSIA',
+                gppString: 'DBABBg~BAAAAABA.QA',
+                gppStringGpc: 'DBABBg~BAUAAABA.YA',
                 applicableSections: [8],
                 description: 'California-specific privacy signals (Do Not Sell/Share).'
             },
             'us_va': {
                 name: 'Virginia (VCDPA)',
                 flag: '🏛️',
-                gppString: 'DBABNA~BVqqmSIA',
+                gppString: 'DBABRg~BAAAABA',
+                gppStringGpc: 'DBABRg~BAUAABA',
                 applicableSections: [9],
                 description: 'Virginia-specific privacy signals for consumer data protection.'
             }
@@ -174,7 +177,7 @@
                             <div className="flex-[1.5] p-6 space-y-4 text-left">
                                 <h3 className="text-slate-200 font-black text-[10px] uppercase tracking-[0.2em] mb-3">GPP Transparency String</h3>
                                 <div className="font-mono text-[10px] bg-black/60 p-5 rounded-xl border border-slate-700/50 text-indigo-400 break-all leading-relaxed shadow-inner min-h-[60px] flex items-center justify-center text-center">
-                                    {current.gppString || <span className="italic text-slate-700 uppercase tracking-normal">No signals provided.</span>}
+                                    {(gpcActive && current.gppStringGpc ? current.gppStringGpc : current.gppString) || <span className="italic text-slate-700 uppercase tracking-normal">No signals provided.</span>}
                                 </div>
                             </div>
                         </div>
@@ -339,14 +342,21 @@
                 const pbjs = window.pbjs || {};
                 setIsAuctionRunning(true); setWinner(null); setStatus("Auctioning...");
                 addLog("Starting Prebid.js Distributed Auction", "event");
-                
+
                 if (gpcActive) addLog("Global Privacy Control (GPC) active", "privacy");
-                const openRtbRequest = { regs: { gpc: gpcActive ? '1' : '0', ...(jurisdiction !== 'none' ? { gpp: JURISDICTIONS[jurisdiction].gppString, gpp_sid: JURISDICTIONS[jurisdiction].applicableSections } : {}) } };
+                const gppString = gpcActive && JURISDICTIONS[jurisdiction].gppStringGpc ? JURISDICTIONS[jurisdiction].gppStringGpc : JURISDICTIONS[jurisdiction].gppString;
+                const openRtbRequest = { regs: { gpc: gpcActive ? '1' : '0', ...(jurisdiction !== 'none' ? { gpp: gppString, gpp_sid: JURISDICTIONS[jurisdiction].applicableSections } : {}) } };
                 addLog(`OpenRTB BidRequest serialized with privacy regs`, "privacy", openRtbRequest);
 
                 setTimeout(() => {
-                    const mockBid = { bidder: 'appnexus', cpm: (Math.random()*10+1), timeToRespond: 200, adUnitCode: 'ad-slot-1' };
-                    addLog(`Mock bid received: ${mockBid.bidder} ($${mockBid.cpm.toFixed(2)})`, "bid");
+                    const mockBid = {
+                        bidder: 'appnexus',
+                        cpm: (Math.random()*10+1),
+                        timeToRespond: 200,
+                        adUnitCode: 'ad-slot-1',
+                        ad: `<html><body style="margin:0;padding:0;background:#0f172a;display:flex;align-items:center;justify-content:center;height:250px;border:2px solid #3b82f6;border-radius:8px;box-sizing:border-box;"><div style="text-align:center;color:white;font-family:sans-serif;"><div style="font-weight:bold;font-size:24px;margin-bottom:8px;">APPNEXUS</div><div style="color:#60a5fa;font-size:18px;">WINNING BID: ${(Math.random()*10+1).toFixed(2)}</div><div style="font-size:12px;margin-top:12px;opacity:0.7;">Rendered via BidLab Mock Adapter</div><div style="font-size:10px;margin-top:4px;color:#94a3b8;">Jurisdiction: ${JURISDICTIONS[jurisdiction].name}</div></div></body></html>`
+                    };
+                    addLog(`Mock bid received: ${mockBid.bidder} (${mockBid.cpm.toFixed(2)})`, "bid");
                     setWinner(mockBid); setStatus(`Served by ${mockBid.bidder}`); setIsAuctionRunning(false);
                 }, 1000);
             };

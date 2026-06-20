@@ -54,11 +54,15 @@ function App() {
             }
             pbjs.addAdUnits(adUnits);
 
+            const gppString = gpcActive && JURISDICTIONS[jurisdiction].gppStringGpc 
+                ? JURISDICTIONS[jurisdiction].gppStringGpc 
+                : JURISDICTIONS[jurisdiction].gppString;
+
             const gppConfig = jurisdiction !== 'none' ? {
                 gpp: {
                     cmpApi: 'static',
                     consentData: {
-                        gppString: JURISDICTIONS[jurisdiction].gppString,
+                        gppString: gppString,
                         applicableSections: JURISDICTIONS[jurisdiction].applicableSections
                     }
                 }
@@ -72,10 +76,10 @@ function App() {
 
             addLog(`BidLab Prebid Engine Initialized (Mode: ${JURISDICTIONS[jurisdiction].name})`, "event");
             if (jurisdiction !== 'none') {
-                addLog(`GPP System Configured: ${JURISDICTIONS[jurisdiction].gppString}`, "privacy");
+                addLog(`GPP System Configured: ${gppString}`, "privacy");
             }
         });
-    }, [addLog, jurisdiction]);
+    }, [addLog, jurisdiction, gpcActive]);
 
     const handleBids = useCallback((bidResponses) => {
         const responses = window.pbjs.getBidResponses();
@@ -120,6 +124,10 @@ function App() {
                 const latency = Math.floor(Math.random() * 800) + 100;
                 
                 setTimeout(() => {
+                    const gppString = gpcActive && JURISDICTIONS[jurisdiction].gppStringGpc 
+                        ? JURISDICTIONS[jurisdiction].gppStringGpc 
+                        : JURISDICTIONS[jurisdiction].gppString;
+
                     const bidResponse = {
                         bidder: bidder,
                         cpm: parseFloat(cpm),
@@ -127,7 +135,7 @@ function App() {
                         gpc: gpcActive ? 'active' : 'inactive',
                         gpp: jurisdiction !== 'none' ? {
                             status: 'validated',
-                            string: JURISDICTIONS[jurisdiction].gppString,
+                            string: gppString,
                             sid: JURISDICTIONS[jurisdiction].applicableSections
                         } : 'none'
                     };
@@ -190,11 +198,15 @@ function App() {
             addLog("Global Privacy Control (GPC) enforcement active", "privacy");
         }
 
+        const gppString = gpcActive && JURISDICTIONS[jurisdiction].gppStringGpc 
+            ? JURISDICTIONS[jurisdiction].gppStringGpc 
+            : JURISDICTIONS[jurisdiction].gppString;
+
         const openRtbRequest = {
             regs: {
                 gpc: gpcActive ? '1' : '0',
                 ...(jurisdiction !== 'none' ? {
-                    gpp: JURISDICTIONS[jurisdiction].gppString,
+                    gpp: gppString,
                     gpp_sid: JURISDICTIONS[jurisdiction].applicableSections
                 } : {})
             }

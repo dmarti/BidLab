@@ -79,7 +79,7 @@ const testBidRequest = {
     user: { id: "user-mock-123" },
     regs: {
         gpc: '1',
-        gpp: 'DBAAABA~CP1A6aAP1A6aAAMAAAENACCAAAAAAAAAAAAA',
+        gpp: 'DBABMA~CQmDUEAQmDUEAAAAAAENAAFgAIAAAAAAAAAAAAAAAAAA.IAAA.YAAAAAAAAAAA',
         gpp_sid: [2]
     }
 };
