@@ -1,4 +1,4 @@
-import { GppModel } from '@iabgpp/cmpapi';
+import { GppModel, HeaderV1 } from '@iabgpp/cmpapi';
 import { JURISDICTIONS } from '../src/constants/jurisdictions.js';
 
 const validateGPPString = (gppString, expectedSections) => {
@@ -8,8 +8,9 @@ const validateGPPString = (gppString, expectedSections) => {
     }
 
     try {
-        const model = new GppModel(gppString);
-        const sectionIds = model.getSectionIds();
+        const headerPart = gppString.split('~')[0];
+        const header = new HeaderV1(headerPart);
+        const sectionIds = header.getFieldValue('SectionIds');
 
         expectedSections.forEach(id => {
             if (!sectionIds.includes(id)) {

@@ -16,7 +16,7 @@ export const JURISDICTIONS = {
     'us_nat': {
         name: 'US National',
         flag: '🇺🇸',
-        gppString: 'DBABLA~BAAAAAAAAABA.QA',
+        gppString: 'DBACaYA~A~BAAAAAAAAABA.QA',
         gppStringGpc: 'DBACaYA~G~BAAVAAAAAABA.YA',
         applicableSections: [7, 1],
         description: 'IAB US National Privacy string for multi-state compliance.'
@@ -24,7 +24,7 @@ export const JURISDICTIONS = {
     'us_ca': {
         name: 'California (CCPA/CPRA)',
         flag: '🐻',
-        gppString: 'DBABBg~BAAAAABA.QA',
+        gppString: 'DBACZYA~A~BAAAAABA.QA',
         gppStringGpc: 'DBACZYA~G~BAUAAABA.YA',
         applicableSections: [8, 1],
         description: 'California-specific privacy signals (Do Not Sell/Share).'
@@ -32,7 +32,7 @@ export const JURISDICTIONS = {
     'us_va': {
         name: 'Virginia (VCDPA)',
         flag: '🏛️',
-        gppString: 'DBABRg~BAAAABA',
+        gppString: 'DBACYMA~A~BAAAABA',
         gppStringGpc: 'DBACYMA~G~BAUAABA',
         applicableSections: [9, 1],
         description: 'Virginia-specific privacy signals for consumer data protection.'
