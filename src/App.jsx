@@ -45,8 +45,14 @@ function App() {
     };
 
     useEffect(() => {
-        const pbjs = window.pbjs || {};
-        pbjs.que = pbjs.que || [];
+        // Prebid.js initialization (Queue and Global object) should be handled in index.html
+        // We ensure the global object is used here.
+        const pbjs = window.pbjs;
+
+        if (!pbjs || !pbjs.que) {
+            addLog("Error: Prebid.js global object or queue missing. Check index.html initialization.", "error");
+            return;
+        }
 
         const adUnits = [{
             code: 'ad-slot-1',
