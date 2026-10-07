@@ -112,21 +112,24 @@ function App() {
         });
     }, [addLog, jurisdiction, gpcActive]);
 
-    const handleBids = useCallback(() => {
-        const pbjs = window.pbjs;
+    const handleBids = useCallback((bidResponses) => {
         addLog("All bids received or timeout reached", "event");
         
-        const responses = pbjs.getBidResponses();
+        const responses = window.pbjs.getBidResponses();
         const slotBids = responses['ad-slot-1'] ? responses['ad-slot-1'].bids : [];
+        const finalBids = [...slotBids, ...(window._simulatedBids || [])];
         
-        slotBids.forEach(bid => {
-            addLog(`Bid from ${bid.bidder}: $${bid.cpm} (${bid.timeToRespond}ms)`, "bid");
+        addLog(`Auction lifecycle complete (${finalBids.length} bids total)`, "event");
+        finalBids.sort((a, b) => b.cpm - a.cpm);
+        
+        finalBids.forEach(bid => {
+            addLog(`Bid: ${bid.bidder} - ${bid.cpm.toFixed(2)} (${bid.timeToRespond}ms)`, "bid");
         });
 
-        const highestBid = pbjs.getHighestCpmBids('ad-slot-1')[0];
+        const highestBid = finalBids.length > 0 ? finalBids[0] : null;
         
         if (highestBid) {
-            addLog(`Winner Selected: ${highestBid.bidder} at $${highestBid.cpm}`, "bid");
+            addLog(`Winner: ${highestBid.bidder} (${highestBid.cpm.toFixed(2)})`, "bid");
             setWinner(highestBid);
             setStatus(`Served by ${highestBid.bidder}`);
             addLog(`Creative rendered via ${highestBid.bidder} adapter`, "event");
@@ -145,62 +148,57 @@ function App() {
         setIsAuctionRunning(false);
     }, [addLog, trackEvent, jurisdiction]);
 
-    const injectMockBids = useCallback(() => {
-        const pbjs = window.pbjs;
-        const mockBidders = ['appnexus', 'rubicon', 'openx'];
+    const simulateBidding = () => {
+        const bidders = ['appnexus', 'rubicon', 'openx'];
+        window._simulatedBids = [];
         
-        mockBidders.forEach(bidder => {
-            const cpm = (Math.random() * 10 + 1).toFixed(2);
-            const latency = Math.floor(Math.random() * 600) + 200;
-            
-            setTimeout(() => {
-                const gppString = gpcActive && JURISDICTIONS[jurisdiction].gppStringGpc 
-                    ? JURISDICTIONS[jurisdiction].gppStringGpc 
-                    : JURISDICTIONS[jurisdiction].gppString;
+        addLog("Simulating distributed bid adapters...", "event");
+        
+        const promises = bidders.map(bidder => {
+            return new Promise(resolve => {
+                const cpm = (Math.random() * 8 + 2).toFixed(2);
+                const latency = Math.floor(Math.random() * 800) + 100;
+                
+                setTimeout(() => {
+                    const gppString = gpcActive && JURISDICTIONS[jurisdiction].gppStringGpc 
+                        ? JURISDICTIONS[jurisdiction].gppStringGpc 
+                        : JURISDICTIONS[jurisdiction].gppString;
 
-                const bidResponse = {
-                    bidder: bidder,
-                    cpm: parseFloat(cpm),
-                    latency: latency,
-                    gpc: gpcActive ? 'active' : 'inactive',
-                    gpp: jurisdiction !== 'none' ? {
-                        status: 'validated',
-                        string: gppString,
-                        sid: JURISDICTIONS[jurisdiction].applicableSections
-                    } : 'none'
-                };
+                    const bidResponse = {
+                        bidder: bidder,
+                        cpm: parseFloat(cpm),
+                        latency: latency,
+                        gpc: gpcActive ? 'active' : 'inactive',
+                        gpp: jurisdiction !== 'none' ? {
+                            status: 'validated',
+                            string: gppString,
+                            sid: JURISDICTIONS[jurisdiction].applicableSections
+                        } : 'none'
+                    };
 
-                if (jurisdiction !== 'none' || gpcActive) {
-                    addLog(`[${bidder}] Privacy signals validated in adapter flow`, "privacy", bidResponse);
-                }
+                    if (jurisdiction !== 'none' || gpcActive) {
+                        addLog(`[${bidder}] Privacy signals validated in adapter flow`, "privacy", bidResponse);
+                    }
 
-                const bid = {
-                    bidderCode: bidder,
-                    width: 300,
-                    height: 250,
-                    statusMessage: 'Bid available',
-                    adId: Math.random().toString(36).substring(2, 15),
-                    cpm: parseFloat(cpm),
-                    ad: `<html><body style="margin:0;padding:0;background:#0f172a;display:flex;align-items:center;justify-content:center;height:250px;border:2px solid #3b82f6;border-radius:8px;box-sizing:border-box;"><div style="text-align:center;color:white;font-family:sans-serif;"><div style="font-weight:bold;font-size:24px;margin-bottom:8px;">${bidder.toUpperCase()}</div><div style="color:#60a5fa;font-size:18px;">WINNING BID: ${cpm}</div><div style="font-size:12px;margin-top:12px;opacity:0.7;">Rendered via BidLab Mock Adapter</div><div style="font-size:10px;margin-top:4px;color:#94a3b8;">Jurisdiction: ${JURISDICTIONS[jurisdiction].name}</div></div></body></html>`,
-                    currency: 'USD',
-                    netRevenue: true,
-                    ttl: 300,
-                    creativeId: 'mock-creative-' + bidder,
-                    requestId: 'mock-req-' + bidder,
-                    auctionId: 'mock-auc-' + bidder,
-                    transactionId: 'mock-tx-' + bidder,
-                    responseTimestamp: Date.now(),
-                    requestTimestamp: Date.now() - latency,
-                    bidder: bidder,
-                    timeToRespond: latency,
-                    size: '300x250',
-                    adUnitCode: 'ad-slot-1'
-                };
-                pbjs.addBidResponse('ad-slot-1', bid);
-                addLog(`Mock bid received: ${bidder} ($${cpm})`, "bid");
-            }, latency);
+                    const mockBid = {
+                        bidder: bidder,
+                        cpm: parseFloat(cpm),
+                        timeToRespond: latency,
+                        ad: `<html><body style="margin:0;padding:0;background:#0f172a;display:flex;align-items:center;justify-content:center;height:250px;border:2px solid #3b82f6;border-radius:8px;box-sizing:border-box;"><div style="text-align:center;color:white;font-family:sans-serif;"><div style="font-weight:bold;font-size:24px;margin-bottom:8px;">${bidder.toUpperCase()}</div><div style="color:#60a5fa;font-size:18px;">WINNING BID: ${cpm}</div><div style="font-size:12px;margin-top:12px;opacity:0.7;">Rendered via BidLab Mock Adapter</div><div style="font-size:10px;margin-top:4px;color:#94a3b8;">Jurisdiction: ${JURISDICTIONS[jurisdiction].name}</div></div></body></html>`,
+                        width: 300,
+                        height: 250,
+                        adUnitCode: 'ad-slot-1'
+                    };
+                    
+                    window._simulatedBids.push(mockBid);
+                    addLog(`Inbound bid from adapter: ${bidder} (${cpm})`, "bid");
+                    resolve();
+                }, latency);
+            });
         });
-    }, [addLog, jurisdiction, gpcActive]);
+
+        return Promise.all(promises);
+    };
 
     const runAuction = () => {
         const pbjs = window.pbjs;
@@ -213,34 +211,37 @@ function App() {
         setStatus("Auctioning...");
         addLog("Starting Prebid.js Distributed Auction", "event");
         
-        pbjs.que.push(() => {
-            if (gpcActive) {
-                addLog("Global Privacy Control (GPC) enforcement active", "privacy");
+        if (gpcActive) {
+            addLog("Global Privacy Control (GPC) enforcement active", "privacy");
+        }
+
+        const gppString = gpcActive && JURISDICTIONS[jurisdiction].gppStringGpc 
+            ? JURISDICTIONS[jurisdiction].gppStringGpc 
+            : JURISDICTIONS[jurisdiction].gppString;
+
+        // Log simulated OpenRTB privacy fields for the demonstration
+        const openRtbRequest = {
+            regs: {
+                gpc: gpcActive ? '1' : '0',
+                ...(jurisdiction !== 'none' ? {
+                    gpp: gppString,
+                    gpp_sid: JURISDICTIONS[jurisdiction].applicableSections
+                } : {})
             }
-            const gppString = gpcActive && JURISDICTIONS[jurisdiction].gppStringGpc 
-                ? JURISDICTIONS[jurisdiction].gppStringGpc 
-                : JURISDICTIONS[jurisdiction].gppString;
+        };
+        addLog(`OpenRTB BidRequest serialized with privacy regs`, "privacy", openRtbRequest);
 
-            // Log simulated OpenRTB privacy fields for the demonstration
-            const openRtbRequest = {
-                regs: {
-                    gpc: gpcActive ? '1' : '0',
-                    ...(jurisdiction !== 'none' ? {
-                        gpp: gppString,
-                        gpp_sid: JURISDICTIONS[jurisdiction].applicableSections
-                    } : {})
-                }
-            };
-            addLog(`OpenRTB BidRequest serialized with privacy regs`, "privacy", openRtbRequest);
+        // Start simulation in parallel — no reliance on internal Prebid APIs
+        const simulationPromise = simulateBidding();
 
+        pbjs.que.push(() => {
             pbjs.requestBids({
                 timeout: PREBID_TIMEOUT,
-                bidsBackHandler: () => {
-                    handleBids();
+                bidsBackHandler: async (bids) => {
+                    await simulationPromise;
+                    handleBids(bids);
                 }
             });
-            // Inject mock bids to ensure the demo always has winners
-            injectMockBids();
         });
     };
 

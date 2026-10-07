@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "test": "node tests/openrtb-validation.js && node tests/gpp-validation.js && node tests/prebid-load-test.js",
+    "test": "node tests/openrtb-validation.js && node tests/gpp-validation.js && node tests/prebid-load-test.js && node tests/auction-integration-test.js",
     "preview": "vite preview"
   },
   "dependencies": {
