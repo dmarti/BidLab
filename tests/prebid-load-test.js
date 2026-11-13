@@ -19,8 +19,7 @@ async function testPrebidLoad() {
         
         // Mock the environment
         const dom = new JSDOM(html, {
-            runScripts: "dangerously",
-            resources: "usable"
+            runScripts: "dangerously"
         });
         
         const { window } = dom;
@@ -30,11 +29,14 @@ async function testPrebidLoad() {
             console.log(`✅ Prebid.js global object and queue initialized correctly in ${fileName}`);
         } else {
             console.error(`❌ Prebid.js global object or queue NOT initialized in ${fileName}`);
+            window.close();
             process.exit(1);
         }
+        window.close();
     }
     
     console.log("✅ All Prebid.js load tests passed!");
+    process.exit(0);
 }
 
 testPrebidLoad().catch(err => {
